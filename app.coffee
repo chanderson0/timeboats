@@ -79,8 +79,8 @@ everyauth.facebook
       if err or not user?
         console.log 'creating user', err
         user = new User()
+        user.name = fbUserMetadata.name
         user.fb_id = fbUserMetadata.id
-        user.fb_name = fbUserMetadata.name
         user.fb_token = accessToken
         user.save (err) ->
           if err
