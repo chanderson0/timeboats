@@ -62,11 +62,10 @@ window.onload = function() {
   return frame();
 };
 Timeboats = (function() {
-  function Timeboats(context, width, height, slider) {
+  function Timeboats(context, width, height) {
     this.context = context;
     this.width = width;
     this.height = height;
-    this.slider = slider;
     this.onMouseMove = __bind(this.onMouseMove, this);
     this.onMouseDown = __bind(this.onMouseDown, this);
     this.timestep = 1 / 60;
@@ -127,10 +126,10 @@ Timeboats = (function() {
     } else if (newState === "stopped") {
       this.gamestate = "stopped";
       this.message = "Done playback.";
-      $("#playbutton").html("Play");
-      $("#addbutton").html("Add New");
       this.frame_num = 0;
-      return this.updateSlider(this.frame_num);
+      this.updateSlider(this.frame_num);
+      $("#playbutton").html("Play");
+      return $("#addbutton").html("Add New");
     } else {
       return console.log("couldn't switch state");
     }

@@ -1,10 +1,10 @@
 # Timeboats!
 
+# Helper function.
 timestamp = ->
   +new Date()
 
-# Setting up Paper.js
-# "paper" is a global
+# Setup.
 window.onload = ->
   canvas = $('#game-canvas')[0]
   context = canvas.getContext '2d'
@@ -59,8 +59,9 @@ window.onload = ->
 
   frame()
 
+# Main game class.
 class Timeboats
-  constructor: (@context, @width, @height, @slider) ->
+  constructor: (@context, @width, @height) ->
     @timestep = 1 / 60
     @renderstep = 1 / 60
 
@@ -99,6 +100,7 @@ class Timeboats
       player = new Square(100, 100, 50)
       @frame_history[@frame_num].addObject @player_id, player
       @gamestate = "recording"
+
       $("#playbutton").html "Stop"
       $("#addbutton").html "Rewind"
       $("#addbutton").prop "disabled", true
@@ -106,24 +108,28 @@ class Timeboats
       @frame_num = 0
       @gamestate = "paused"
       @updateSlider(@frame_num)
+
       $("#playbutton").html "Play"
       $("#addbutton").html "Rewind"
       $("#addbutton").prop "disabled", false
     else if newState == "playing"
       @gamestate = "playing"
+
       $("#playbutton").html "Pause"
       $("#addbutton").html "Rewind"
     else if newState == "paused"
       @gamestate = "paused"
+
       $("#playbutton").html "Play"
       $("#addbutton").html "Rewind"
     else if newState == "stopped"
       @gamestate = "stopped"
       @message = "Done playback."
-      $("#playbutton").html "Play"
-      $("#addbutton").html "Add New"
       @frame_num = 0
       @updateSlider(@frame_num)
+
+      $("#playbutton").html "Play"
+      $("#addbutton").html "Add New"
     else
       console.log "couldn't switch state"
 
