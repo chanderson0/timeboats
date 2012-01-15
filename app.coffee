@@ -116,6 +116,6 @@ app.get '/game/:id', (req, res) ->
   )
 
 everyauth.helpExpress app
-var port = process.env.PORT || 3000;
+port = process.env.PORT || 3000
 app.listen port, ->
   console.log "Listening on " + port
