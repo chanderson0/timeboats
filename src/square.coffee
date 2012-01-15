@@ -1,17 +1,18 @@
 GameObject2D = require('./game_object_2d.coffee').GameObject2D
 Point = require('./point.coffee').Point
+Explosion = require('./explosion.coffee').Explosion
 
 exports.Square = class Square extends GameObject2D
   __type: 'Square'
 
-  constructor: (@x, @y, @size) ->
-    super @x, @y
+  constructor: (@id, @x, @y, @size) ->
+    super @id, @x, @y
 
     @destx = @x
     @desty = @y
 
   clone: ->
-    sq = new Square @x, @y, @size
+    sq = new Square @id, @x, @y, @size
     sq.rotation = @rotation
     sq.vx = @vx
     sq.vy = @vy
@@ -19,7 +20,13 @@ exports.Square = class Square extends GameObject2D
     sq.desty = @desty
     return sq
 
-  update: (dt) ->
+  explode: (state) ->
+    id = Math.floor(Math.random() * 1000000)
+    explosion = new Explosion id, @x, @y, 50
+    state.addObject id, explosion
+    state.removeObject @id
+
+  update: (dt, state) ->
     dir = Point.subtract @destx, @desty, @x, @y
     dist = Point.getLength dir.x, dir.y
 
@@ -29,7 +36,7 @@ exports.Square = class Square extends GameObject2D
       @setPos @destx, @desty
 
     @setVel to_move.x, to_move.y
-    super dt
+    super dt, state
 
   draw: (context) ->
     context.save()

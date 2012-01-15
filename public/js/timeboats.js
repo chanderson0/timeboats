@@ -342,7 +342,7 @@ exports.extname = function(path) {
 
 require.define("/timeboats.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var MouseCommand, Point, Square, State, Timeboats;
+  var ExplodeCommand, MouseCommand, Point, Square, State, Timeboats;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   State = require('./state.coffee').State;
@@ -350,6 +350,8 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
   Square = require('./square.coffee').Square;
 
   MouseCommand = require('./mouse_command.coffee').MouseCommand;
+
+  ExplodeCommand = require('./explode_command.coffee').ExplodeCommand;
 
   Point = require('./point.coffee').Point;
 
@@ -398,7 +400,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       console.log(oldState, '->', newState);
       if (newState === "recording") {
         this.player_id++;
-        player = new Square(100, 100, 50);
+        player = new Square(this.player_id, 100, 100, 20);
         this.frame_history[this.frame_num].addObject(this.player_id, player);
         this.gamestate = "recording";
         $("#playbutton").html("Stop");
@@ -482,7 +484,13 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       return this.context.fillText(this.message, 10, 30);
     };
 
-    Timeboats.prototype.onMouseDown = function(e) {};
+    Timeboats.prototype.onMouseDown = function(e) {
+      var command;
+      if (this.gamestate === "recording") {
+        command = new ExplodeCommand(this.player_id);
+        return this.addCommand(command);
+      }
+    };
 
     Timeboats.prototype.onMouseMove = function(e) {
       var command;
@@ -542,8 +550,9 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
     };
 
     State.prototype.removeObject = function(id) {
+      var _this = this;
       return this.objects[id].leave(function() {
-        return delete this.objects[id];
+        return delete _this.objects[id];
       });
     };
 
@@ -561,7 +570,7 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
       _ref2 = this.objects;
       for (id in _ref2) {
         object = _ref2[id];
-        object.update(dt);
+        object.update(dt, this);
       }
       return true;
     };
@@ -641,12 +650,14 @@ require.define("/serializable.coffee", function (require, module, exports, __dir
 
 require.define("/square.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var GameObject2D, Point, Square;
+  var Explosion, GameObject2D, Point, Square;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject2D = require('./game_object_2d.coffee').GameObject2D;
 
   Point = require('./point.coffee').Point;
+
+  Explosion = require('./explosion.coffee').Explosion;
 
   exports.Square = Square = (function() {
 
@@ -654,18 +665,19 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 
     Square.prototype.__type = 'Square';
 
-    function Square(x, y, size) {
+    function Square(id, x, y, size) {
+      this.id = id;
       this.x = x;
       this.y = y;
       this.size = size;
-      Square.__super__.constructor.call(this, this.x, this.y);
+      Square.__super__.constructor.call(this, this.id, this.x, this.y);
       this.destx = this.x;
       this.desty = this.y;
     }
 
     Square.prototype.clone = function() {
       var sq;
-      sq = new Square(this.x, this.y, this.size);
+      sq = new Square(this.id, this.x, this.y, this.size);
       sq.rotation = this.rotation;
       sq.vx = this.vx;
       sq.vy = this.vy;
@@ -674,7 +686,15 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       return sq;
     };
 
-    Square.prototype.update = function(dt) {
+    Square.prototype.explode = function(state) {
+      var explosion, id;
+      id = Math.floor(Math.random() * 1000000);
+      explosion = new Explosion(id, this.x, this.y, 50);
+      state.addObject(id, explosion);
+      return state.removeObject(this.id);
+    };
+
+    Square.prototype.update = function(dt, state) {
       var dir, dist, to_move;
       dir = Point.subtract(this.destx, this.desty, this.x, this.y);
       dist = Point.getLength(dir.x, dir.y);
@@ -687,7 +707,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
         this.setPos(this.destx, this.desty);
       }
       this.setVel(to_move.x, to_move.y);
-      return Square.__super__.update.call(this, dt);
+      return Square.__super__.update.call(this, dt, state);
     };
 
     Square.prototype.draw = function(context) {
@@ -721,17 +741,18 @@ require.define("/game_object_2d.coffee", function (require, module, exports, __d
 
     GameObject2D.prototype.__type = 'GameObject2D';
 
-    function GameObject2D(x, y, vx, vy, rotation) {
+    function GameObject2D(id, x, y, vx, vy, rotation) {
+      this.id = id;
       this.x = x != null ? x : 0;
       this.y = y != null ? y : 0;
       this.vx = vx != null ? vx : 0;
       this.vy = vy != null ? vy : 0;
       this.rotation = rotation != null ? rotation : 0;
-      GameObject2D.__super__.constructor.call(this, this.state);
+      GameObject2D.__super__.constructor.call(this, this.id);
     }
 
     GameObject2D.prototype.clone = function() {
-      return new GameObject2D(this.x, this.y, this.vx, this.vy, this.rotation);
+      return new GameObject2D(this.id, this.x, this.y, this.vx, this.vy, this.rotation);
     };
 
     GameObject2D.prototype.setPos = function(x, y) {
@@ -774,17 +795,18 @@ require.define("/game_object.coffee", function (require, module, exports, __dirn
 
     GameObject.prototype.__type = 'GameObject';
 
-    function GameObject() {
+    function GameObject(id) {
+      this.id = id;
       GameObject.__super__.constructor.apply(this, arguments);
     }
 
     GameObject.prototype.clone = function() {
-      return new GameObject();
+      return new GameObject(this.id);
     };
 
     GameObject.prototype.draw = function(context) {};
 
-    GameObject.prototype.update = function(dt) {};
+    GameObject.prototype.update = function(dt, state) {};
 
     GameObject.prototype.leave = function(callback) {
       return callback();
@@ -858,6 +880,69 @@ require.define("/point.coffee", function (require, module, exports, __dirname, _
 
 });
 
+require.define("/explosion.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var Explosion, GameObject, Point;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject = require('./game_object.coffee').GameObject;
+
+  Point = require('./point.coffee').Point;
+
+  exports.Explosion = Explosion = (function() {
+
+    __extends(Explosion, GameObject);
+
+    Explosion.prototype.__type = 'Explosion';
+
+    function Explosion(id, x, y, max_radius) {
+      this.id = id;
+      this.x = x;
+      this.y = y;
+      this.max_radius = max_radius;
+      Explosion.__super__.constructor.call(this, this.id, this.x, this.y);
+      this.radius = 0;
+    }
+
+    Explosion.prototype.clone = function() {
+      var exp;
+      exp = new Explosion(this.id, this.x, this.y, this.max_radius);
+      exp.radius = this.radius;
+      return exp;
+    };
+
+    Explosion.prototype.update = function(dt, state) {
+      var id, object, _ref;
+      this.radius += dt * 100;
+      _ref = state.objects;
+      for (id in _ref) {
+        object = _ref[id];
+        if (object.__type === 'Square' && Point.getDistance(this.x, this.y, object.x, object.y) < this.radius) {
+          object.explode(state);
+        }
+      }
+      Explosion.__super__.update.call(this, dt, state);
+      if (this.radius >= this.max_radius) return state.removeObject(this.id);
+    };
+
+    Explosion.prototype.draw = function(context) {
+      context.save();
+      context.translate(this.x, this.y);
+      context.beginPath();
+      context.arc(0, 0, this.radius, 0, Math.PI * 2, true);
+      context.closePath();
+      context.stroke();
+      return context.restore();
+    };
+
+    return Explosion;
+
+  })();
+
+}).call(this);
+
+});
+
 require.define("/mouse_command.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
   var Command, MouseCommand;
@@ -916,6 +1001,38 @@ require.define("/command.coffee", function (require, module, exports, __dirname,
     Command.prototype.apply = function(state) {};
 
     return Command;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/explode_command.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var Command, ExplodeCommand;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Command = require('./command.coffee').Command;
+
+  exports.ExplodeCommand = ExplodeCommand = (function() {
+
+    __extends(ExplodeCommand, Command);
+
+    ExplodeCommand.prototype.__type = 'ExplodeCommand';
+
+    function ExplodeCommand(id) {
+      this.id = id;
+      ExplodeCommand.__super__.constructor.call(this, this.id);
+    }
+
+    ExplodeCommand.prototype.apply = function(state) {
+      var obj;
+      obj = state.getObject(this.id);
+      if (obj != null) return obj.explode(state);
+    };
+
+    return ExplodeCommand;
 
   })();
 

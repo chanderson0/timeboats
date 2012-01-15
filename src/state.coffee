@@ -25,15 +25,16 @@ exports.State = class State extends Serializable
     @objects[id]
 
   removeObject: (id) ->
-    @objects[id].leave () ->
+    @objects[id].leave =>
       delete @objects[id]
 
   update: (dt) ->
     for command in @commands
       do (command) =>
         command.apply this
+
     for id, object of @objects
-      object.update dt
+      object.update dt, this
 
     true
 

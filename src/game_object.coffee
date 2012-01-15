@@ -3,15 +3,15 @@ Serializable = require('./serializable.coffee').Serializable
 exports.GameObject = class GameObject extends Serializable
   __type: 'GameObject'
 
-  constructor: () ->
+  constructor: (@id) ->
     super
 
   clone: ->
-    new GameObject()
+    new GameObject @id
 
   draw: (context) ->
 
-  update: (dt) ->
+  update: (dt, state) ->
     # Override me!
 
   leave: (callback) ->

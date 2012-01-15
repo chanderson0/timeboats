@@ -1,6 +1,7 @@
 State = require('./state.coffee').State
 Square = require('./square.coffee').Square
 MouseCommand = require('./mouse_command.coffee').MouseCommand
+ExplodeCommand = require('./explode_command.coffee').ExplodeCommand
 Point = require('./point.coffee').Point
 
 exports.Timeboats = class Timeboats
@@ -40,7 +41,7 @@ exports.Timeboats = class Timeboats
     console.log oldState, '->', newState
     if newState == "recording"
       @player_id++
-      player = new Square(100, 100, 50)
+      player = new Square(@player_id, 100, 100, 20)
       @frame_history[@frame_num].addObject @player_id, player
       @gamestate = "recording"
 
@@ -123,6 +124,9 @@ exports.Timeboats = class Timeboats
     @context.fillText(@message, 10, 30)
 
   onMouseDown: (e) =>
+    if @gamestate == "recording"
+      command = new ExplodeCommand @player_id
+      @addCommand command
 
   onMouseMove: (e) =>
     if @gamestate == "recording"

@@ -4,11 +4,11 @@ Point = require('./point.coffee').Point
 exports.GameObject2D = class GameObject2D extends GameObject
   __type: 'GameObject2D'
 
-  constructor: (@x = 0, @y = 0, @vx = 0, @vy = 0, @rotation = 0) ->
-    super @state
+  constructor: (@id, @x = 0, @y = 0, @vx = 0, @vy = 0, @rotation = 0) ->
+    super @id
 
   clone: ->
-    new GameObject2D @x, @y, @vx, @vy, @rotation
+    new GameObject2D @id, @x, @y, @vx, @vy, @rotation
 
   setPos: (x, y) ->
     @x = x
