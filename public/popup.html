@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Time Boats</title>
+
+  <link rel="stylesheet" href="css/timeboats.css">
+  <script src="js/PokkiBrowser.js"></script>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/requestAnimationFrame.js"></script>
+  <script src="js/timeboats.js"></script>
+</head>
+
+<body>
+  <div id="game">
+    <canvas id="game-canvas" height="384" width="576"></canvas>
+  </div>
+  <div id="controls">
+    <button id="playbutton" style="width: 50px">Start</button>
+    <button id="addbutton" style="width: 80px">Add New</button>
+    <input id="timeslider" type="range" min="0" max="0" value="0" style="width: 300px"/>
+  </div>
+  <div id="instructions">
+    <p>Mouse to move.</p>
+    <p>Click once to start recording. Click again to stop recording and stop playback. Click in the middle of playback to interrupt.</p>
+  </div>
+</body>
+
+</html>
