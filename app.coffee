@@ -18,8 +18,8 @@ Invite = mongoose.model 'Invite', new Schema
     default: Date.now
 
 User = mongoose.model 'User', new Schema
+  name: String
   fb_id: String
-  fb_name: String
   fb_token: String
   invites: [
     type: ObjectId
@@ -57,10 +57,20 @@ everyauth = require 'everyauth'
 everyauth.everymodule.findUserById (id, callback) ->
   User.findOne().where({'fb_id': id}).run(callback)
 
+NODE_ENV = global.process.env.NODE_ENV || 'development'
+
+fb_keys = 
+  'development':
+    'app_id': '236216303119513'
+    'app_secret': '305840219e824288689d39c3695afbf2'
+  'production':
+    'app_id': '302738666439657'
+    'app_secret': '7ff495baaa99f41c3435c0aca5bf2057'
+
 # Debug keys
 everyauth.facebook
-  .appId('236216303119513')
-  .appSecret('305840219e824288689d39c3695afbf2')
+  .appId(fb_keys[NODE_ENV]['app_id'])
+  .appSecret(fb_keys[NODE_ENV]['app_secret'])
   .handleAuthCallbackError((req, res) ->
     # TODO
   ).findOrCreateUser((session, accessToken, accessTokExtra, fbUserMetadata) ->
