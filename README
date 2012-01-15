@@ -3,3 +3,8 @@ Time. Boats.
 Needs coffeescript: http://coffeescript.org/#usage
 After installing, use this command to compile:
 > coffee -c -o public/js/ -w -b src/timeboats.coffee 
+
+Getting started with node:
+1. install nodejs and npm
+2. run 'npm install'
+3. run the server with 'coffee src/app.coffee'

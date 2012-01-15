@@ -19,9 +19,22 @@
     <button id="addbutton" style="width: 80px">Add New</button>
     <input id="timeslider" type="range" min="0" max="0" value="0" style="width: 300px"/>
   </div>
+  <% if ('undefined' === typeof game) { %>
+    <form action="/game" method="POST">
+    <p><label for="name">Game name:</label><br />
+    <input id="name" name="name"></p>
+    <p><input type="submit" /></p>
+    </form>
+  <% } %>
   <div id="instructions">
     <p>Mouse to move.</p>
     <p>Click once to start recording. Click again to stop recording and stop playback. Click in the middle of playback to interrupt.</p>
+    
+    <% if (!everyauth.loggedIn) { %>
+      <p><a href="/auth/facebook">Login with facebook</a></p>
+    <% } else { %>
+      <p>You're logged in with Facebook, <%= everyauth.user.name %></p>
+    <% } %>
   </div>
 </body>
 
