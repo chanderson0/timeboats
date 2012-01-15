@@ -342,7 +342,7 @@ exports.extname = function(path) {
 
 require.define("/timeboats.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var MouseCommand, Point, Square, State, Timeboats;
+  var Map, MouseCommand, Point, Square, State, Timeboats;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   State = require('./state.coffee').State;
@@ -352,6 +352,8 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
   MouseCommand = require('./mouse_command.coffee').MouseCommand;
 
   Point = require('./point.coffee').Point;
+
+  Map = require('./map.coffee').Map;
 
   exports.Timeboats = Timeboats = (function() {
 
@@ -369,6 +371,8 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.frame_num = 0;
       this.player_id = 1;
       this.message = 'not recording';
+      this.map = new Map(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX);
+      this.map.generate(42);
     }
 
     Timeboats.prototype.playClick = function() {
@@ -478,7 +482,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 
     Timeboats.prototype.draw = function() {
       this.context.clearRect(0, 0, this.width + 1, this.height + 1);
+      this.map.draw(this.context);
       this.frame_history[this.frame_num].draw(this.context);
+      this.context.fillStyle = "white";
       return this.context.fillText(this.message, 10, 30);
     };
 
@@ -916,6 +922,143 @@ require.define("/command.coffee", function (require, module, exports, __dirname,
     Command.prototype.apply = function(state) {};
 
     return Command;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/map.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var GameObject, Map, MapCell, Random;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject = require('./game_object').GameObject;
+
+  MapCell = require('./map_cell.coffee').MapCell;
+
+  Random = require('./random.coffee').Random;
+
+  exports.Map = Map = (function() {
+
+    __extends(Map, GameObject);
+
+    Map.prototype.__type = 'Map';
+
+    Map.CELL_SIZE_PX = 16;
+
+    function Map(width, height) {
+      this.width = width;
+      this.height = height;
+      this.cells = [];
+      this.isInitialized = false;
+      Map.__super__.constructor.apply(this, arguments);
+    }
+
+    Map.prototype.clone = function() {
+      return new Map(this.width, this.height);
+    };
+
+    Map.prototype.update = function(dt) {};
+
+    Map.prototype.draw = function(context) {
+      var half_val, val, x, y, _ref, _results;
+      if (this.isInitialized) {
+        _results = [];
+        for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
+          _results.push((function() {
+            var _ref2, _results2;
+            _results2 = [];
+            for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
+              val = 40 + this.cells[x][y].altitude * 20;
+              half_val = val / 2;
+              context.save();
+              context.translate(x * Map.CELL_SIZE_PX, y * Map.CELL_SIZE_PX);
+              context.fillStyle = "rgb(0, " + half_val + ", " + val + ")";
+              context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
+              _results2.push(context.restore());
+            }
+            return _results2;
+          }).call(this));
+        }
+        return _results;
+      }
+    };
+
+    Map.prototype.generate = function(seed) {
+      var col, random, x, y, _ref, _ref2;
+      random = new Random(seed);
+      for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
+        col = [];
+        for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
+          col.push(new MapCell(random.next() % 10));
+        }
+        this.cells.push(col);
+      }
+      return this.isInitialized = true;
+    };
+
+    return Map;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/map_cell.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var GameObject, MapCell;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject = require('./game_object.coffee').GameObject;
+
+  exports.MapCell = MapCell = (function() {
+
+    __extends(MapCell, GameObject);
+
+    MapCell.prototype.__type = 'MapCell';
+
+    function MapCell(altitude) {
+      this.altitude = altitude;
+      MapCell.__super__.constructor.apply(this, arguments);
+    }
+
+    MapCell.prototype.clone = function() {
+      return new MapCell(this.altitude);
+    };
+
+    MapCell.prototype.update = function(dt) {};
+
+    return MapCell;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/random.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var Random;
+
+  exports.Random = Random = (function() {
+
+    Random.prototype.__type = 'Random';
+
+    Random.MAX = 4294967294;
+
+    function Random(seed) {
+      this.last = seed;
+    }
+
+    Random.prototype.next = function() {
+      this.last = ((1664525 * this.last) + 1013904223) % Random.MAX;
+      return this.last;
+    };
+
+    return Random;
 
   })();
 

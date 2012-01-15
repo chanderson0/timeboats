@@ -2,6 +2,7 @@ State = require('./state.coffee').State
 Square = require('./square.coffee').Square
 MouseCommand = require('./mouse_command.coffee').MouseCommand
 Point = require('./point.coffee').Point
+Map = require('./map.coffee').Map
 
 exports.Timeboats = class Timeboats
   constructor: (@context, @width, @height) ->
@@ -9,7 +10,7 @@ exports.Timeboats = class Timeboats
     @renderstep = 1 / 60
 
     @gamestate = "init"
-    
+
     @frame_history = [new State()]
     @command_history = []
     @frame_num = 0
@@ -17,6 +18,9 @@ exports.Timeboats = class Timeboats
     @player_id = 1
 
     @message = 'not recording'
+
+    @map = new Map @width / Map.CELL_SIZE_PX, @height / Map.CELL_SIZE_PX
+    @map.generate 42
 
   playClick: ->
     if @gamestate == "init"
@@ -83,7 +87,7 @@ exports.Timeboats = class Timeboats
       $("#timeslider").prop 'max', max
 
   sliderDrag: (value) ->
-    if @gamestate == "paused" 
+    if @gamestate == "paused"
       @frame_num = value
     else
       @updateState @gamestate, "paused"
@@ -91,7 +95,7 @@ exports.Timeboats = class Timeboats
   addCommand: (command) ->
     while @frame_num >= @command_history.length
       @command_history.push []
-    
+
     @command_history[@frame_num].push command
 
   update: (dt) ->
@@ -105,7 +109,7 @@ exports.Timeboats = class Timeboats
         @frame_history[@frame_num] = next_state
       else
         @frame_history.push next_state
-      
+
       @updateSlider(@frame_num, @frame_history.length - 1)
     else if @gamestate == "playing"
       @frame_num++
@@ -119,7 +123,9 @@ exports.Timeboats = class Timeboats
 
   draw: ->
     @context.clearRect 0, 0, @width + 1, @height + 1
+    @map.draw @context
     @frame_history[@frame_num].draw @context
+    @context.fillStyle = "white"
     @context.fillText(@message, 10, 30)
 
   onMouseDown: (e) =>
