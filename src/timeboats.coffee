@@ -112,6 +112,19 @@ exports.Timeboats = class Timeboats
         @frame_history.push next_state
 
       @updateSlider(@frame_num, @frame_history.length - 1)
+
+      # Check there are still players
+      if @frame_num > 0
+        player_count = 0
+        for id, object of next_state.objects
+          if object.__type == 'Square' || object.__type == 'Explosion'
+            player_count++
+
+        if player_count == 0
+          @frame_history.splice @frame_num + 1, @frame_history.length - @frame_num
+          @updateSlider(@frame_num, @frame_num)
+          @updateState "recording", "paused"
+
     else if @gamestate == "playing"
       @frame_num++
       @updateSlider(@frame_num)

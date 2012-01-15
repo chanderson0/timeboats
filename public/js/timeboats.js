@@ -459,7 +459,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.update = function(dt) {
-      var next_state;
+      var id, next_state, object, player_count, _ref;
       if (this.gamestate === "recording") {
         next_state = this.frame_history[this.frame_num].clone();
         next_state.setCommands(this.command_history[this.frame_num] || []);
@@ -470,7 +470,22 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         } else {
           this.frame_history.push(next_state);
         }
-        return this.updateSlider(this.frame_num, this.frame_history.length - 1);
+        this.updateSlider(this.frame_num, this.frame_history.length - 1);
+        if (this.frame_num > 0) {
+          player_count = 0;
+          _ref = next_state.objects;
+          for (id in _ref) {
+            object = _ref[id];
+            if (object.__type === 'Square' || object.__type === 'Explosion') {
+              player_count++;
+            }
+          }
+          if (player_count === 0) {
+            this.frame_history.splice(this.frame_num + 1, this.frame_history.length - this.frame_num);
+            this.updateSlider(this.frame_num, this.frame_num);
+            return this.updateState("recording", "paused");
+          }
+        }
       } else if (this.gamestate === "playing") {
         this.frame_num++;
         this.updateSlider(this.frame_num);
