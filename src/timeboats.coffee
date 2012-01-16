@@ -20,8 +20,7 @@ exports.Timeboats = class Timeboats
 
     @message = 'not recording'
 
-    @map = new Map @width / Map.CELL_SIZE_PX, @height / Map.CELL_SIZE_PX
-    @map.generate new Date().getTime()
+    Map.getInstance().generate @width / Map.CELL_SIZE_PX, @height / Map.CELL_SIZE_PX, new Date().getTime()
 
   playClick: ->
     if @gamestate == "init"
@@ -104,10 +103,6 @@ exports.Timeboats = class Timeboats
       next_state = @frame_history[@frame_num].clone()
       next_state.setCommands (@command_history[@frame_num] || [])
       next_state.update dt
-      for id, object of next_state.objects
-        if object.__type == 'Square'
-          @map.collideWith object, next_state
-          break
 
       @frame_num++
       if @frame_history.length > @frame_num
@@ -141,7 +136,7 @@ exports.Timeboats = class Timeboats
 
   draw: ->
     @context.clearRect 0, 0, @width + 1, @height + 1
-    @map.draw @context
+    Map.getInstance().draw @context
     @context.fillStyle = "white"
     @context.strokeStyle = "white"
     @frame_history[@frame_num].draw @context

@@ -1,6 +1,7 @@
 GameObject2D = require('./game_object_2d.coffee').GameObject2D
 Point = require('./point.coffee').Point
 Explosion = require('./explosion.coffee').Explosion
+Map = require('./map.coffee').Map
 
 exports.Square = class Square extends GameObject2D
   __type: 'Square'
@@ -36,6 +37,9 @@ exports.Square = class Square extends GameObject2D
       @setPos @destx, @desty
 
     @setVel to_move.x, to_move.y
+
+    Map.getInstance().collideWith(@, state)
+
     super dt, state
 
   draw: (context) ->

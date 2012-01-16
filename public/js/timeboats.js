@@ -373,8 +373,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.frame_num = 0;
       this.player_id = 1;
       this.message = 'not recording';
-      this.map = new Map(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX);
-      this.map.generate(new Date().getTime());
+      Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, new Date().getTime());
     }
 
     Timeboats.prototype.playClick = function() {
@@ -459,19 +458,11 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.update = function(dt) {
-      var id, next_state, object, player_count, _ref, _ref2;
+      var id, next_state, object, player_count, _ref;
       if (this.gamestate === "recording") {
         next_state = this.frame_history[this.frame_num].clone();
         next_state.setCommands(this.command_history[this.frame_num] || []);
         next_state.update(dt);
-        _ref = next_state.objects;
-        for (id in _ref) {
-          object = _ref[id];
-          if (object.__type === 'Square') {
-            this.map.collideWith(object, next_state);
-            break;
-          }
-        }
         this.frame_num++;
         if (this.frame_history.length > this.frame_num) {
           this.frame_history[this.frame_num] = next_state;
@@ -481,9 +472,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.updateSlider(this.frame_num, this.frame_history.length - 1);
         if (this.frame_num > 0) {
           player_count = 0;
-          _ref2 = next_state.objects;
-          for (id in _ref2) {
-            object = _ref2[id];
+          _ref = next_state.objects;
+          for (id in _ref) {
+            object = _ref[id];
             if (object.__type === 'Square' || object.__type === 'Explosion') {
               player_count++;
             }
@@ -507,7 +498,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 
     Timeboats.prototype.draw = function() {
       this.context.clearRect(0, 0, this.width + 1, this.height + 1);
-      this.map.draw(this.context);
+      Map.getInstance().draw(this.context);
       this.context.fillStyle = "white";
       this.context.strokeStyle = "white";
       this.frame_history[this.frame_num].draw(this.context);
@@ -680,7 +671,7 @@ require.define("/serializable.coffee", function (require, module, exports, __dir
 
 require.define("/square.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var Explosion, GameObject2D, Point, Square;
+  var Explosion, GameObject2D, Map, Point, Square;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject2D = require('./game_object_2d.coffee').GameObject2D;
@@ -688,6 +679,8 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
   Point = require('./point.coffee').Point;
 
   Explosion = require('./explosion.coffee').Explosion;
+
+  Map = require('./map.coffee').Map;
 
   exports.Square = Square = (function() {
 
@@ -737,6 +730,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
         this.setPos(this.destx, this.desty);
       }
       this.setVel(to_move.x, to_move.y);
+      Map.getInstance().collideWith(this, state);
       return Square.__super__.update.call(this, dt, state);
     };
 
@@ -922,12 +916,14 @@ require.define("/point.coffee", function (require, module, exports, __dirname, _
 
 require.define("/explosion.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var Explosion, GameObject, Point;
+  var Explosion, GameObject, Map, Point;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject = require('./game_object.coffee').GameObject;
 
   Point = require('./point.coffee').Point;
+
+  Map = require('./map.coffee').Map;
 
   exports.Explosion = Explosion = (function() {
 
@@ -942,6 +938,7 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
       this.max_radius = max_radius;
       Explosion.__super__.constructor.call(this, this.id, this.x, this.y);
       this.radius = 0;
+      Map.getInstance().damageAt(this.x, this.y, this.max_radius);
     }
 
     Explosion.prototype.clone = function() {
@@ -983,103 +980,6 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
 
 });
 
-require.define("/mouse_command.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var Command, MouseCommand;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  Command = require('./command.coffee').Command;
-
-  exports.MouseCommand = MouseCommand = (function() {
-
-    __extends(MouseCommand, Command);
-
-    MouseCommand.prototype.__type = 'MouseCommand';
-
-    function MouseCommand(id, destx, desty) {
-      this.id = id;
-      this.destx = destx;
-      this.desty = desty;
-      MouseCommand.__super__.constructor.call(this, this.id);
-    }
-
-    MouseCommand.prototype.apply = function(state) {
-      var obj;
-      obj = state.getObject(this.id);
-      if (obj != null) {
-        obj.destx = this.destx;
-        return obj.desty = this.desty;
-      }
-    };
-
-    return MouseCommand;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/command.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var Command, Serializable;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  Serializable = require('./serializable.coffee').Serializable;
-
-  exports.Command = Command = (function() {
-
-    __extends(Command, Serializable);
-
-    Command.prototype.__type = 'Command';
-
-    function Command(id) {
-      this.id = id;
-      Command.__super__.constructor.apply(this, arguments);
-    }
-
-    Command.prototype.apply = function(state) {};
-
-    return Command;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/explode_command.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var Command, ExplodeCommand;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  Command = require('./command.coffee').Command;
-
-  exports.ExplodeCommand = ExplodeCommand = (function() {
-
-    __extends(ExplodeCommand, Command);
-
-    ExplodeCommand.prototype.__type = 'ExplodeCommand';
-
-    function ExplodeCommand(id) {
-      this.id = id;
-      ExplodeCommand.__super__.constructor.call(this, this.id);
-    }
-
-    ExplodeCommand.prototype.apply = function(state) {
-      var obj;
-      obj = state.getObject(this.id);
-      if (obj != null) return obj.explode(state);
-    };
-
-    return ExplodeCommand;
-
-  })();
-
-}).call(this);
-
-});
-
 require.define("/map.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
   var GameObject, Gaussian, Map, MapCell, Point, Random;
@@ -1096,16 +996,24 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
   Point = require('./point.coffee').Point;
 
   exports.Map = Map = (function() {
+    var instance;
 
     __extends(Map, GameObject);
 
     Map.prototype.__type = 'Map';
 
+    instance = null;
+
     Map.CELL_SIZE_PX = 16;
 
-    function Map(width, height) {
-      this.width = width;
-      this.height = height;
+    Map.getInstance = function() {
+      if (!(instance != null)) instance = new this;
+      return instance;
+    };
+
+    function Map() {
+      this.width = 0;
+      this.height = 0;
       this.cells = [];
       this.isInitialized = false;
       this.random = null;
@@ -1114,7 +1022,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     }
 
     Map.prototype.clone = function() {
-      return new Map(this.width, this.height);
+      return instance;
     };
 
     Map.prototype.update = function(dt) {};
@@ -1181,12 +1089,48 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       }
     };
 
+    Map.prototype.damageAt = function(x, y, radius) {
+      var g, xG, yG, _ref, _ref2, _results;
+      if (this.isInitialized) {
+        radius = Math.ceil(radius / Map.CELL_SIZE_PX);
+        x = this.getCellAt(x);
+        y = this.getCellAt(y);
+        g = new Gaussian(radius * 0.8);
+        _results = [];
+        for (xG = _ref = x - radius, _ref2 = x + radius; _ref <= _ref2 ? xG <= _ref2 : xG >= _ref2; _ref <= _ref2 ? xG++ : xG--) {
+          _results.push((function() {
+            var _ref3, _ref4, _results2;
+            _results2 = [];
+            for (yG = _ref3 = y - radius, _ref4 = y + radius; _ref3 <= _ref4 ? yG <= _ref4 : yG >= _ref4; _ref3 <= _ref4 ? yG++ : yG--) {
+              if (xG >= 0 && xG < this.width && yG >= 0 && yG < this.height) {
+                this.cells[xG][yG].altitude -= g.get2d(xG - x, yG - y) * 5.0;
+                if (this.cells[xG][yG].altitude < 0) {
+                  this.cells[xG][yG].altitude = 0;
+                }
+                if (this.cells[xG][yG].altitude < this.waterLevel) {
+                  _results2.push(this.cells[xG][yG].isPlant = false);
+                } else {
+                  _results2.push(void 0);
+                }
+              } else {
+                _results2.push(void 0);
+              }
+            }
+            return _results2;
+          }).call(this));
+        }
+        return _results;
+      }
+    };
+
     Map.prototype.getCellAt = function(p) {
       return Math.floor(p / Map.CELL_SIZE_PX);
     };
 
-    Map.prototype.generate = function(seed) {
+    Map.prototype.generate = function(width, height, seed) {
       var col, i, numGaussians, x, y, _ref, _ref2, _ref3, _ref4;
+      this.width = width;
+      this.height = height;
       this.random = new Random(seed);
       this.isInitialized = false;
       this.cells = [];
@@ -1381,6 +1325,103 @@ require.define("/gaussian.coffee", function (require, module, exports, __dirname
     };
 
     return Gaussian;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/mouse_command.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var Command, MouseCommand;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Command = require('./command.coffee').Command;
+
+  exports.MouseCommand = MouseCommand = (function() {
+
+    __extends(MouseCommand, Command);
+
+    MouseCommand.prototype.__type = 'MouseCommand';
+
+    function MouseCommand(id, destx, desty) {
+      this.id = id;
+      this.destx = destx;
+      this.desty = desty;
+      MouseCommand.__super__.constructor.call(this, this.id);
+    }
+
+    MouseCommand.prototype.apply = function(state) {
+      var obj;
+      obj = state.getObject(this.id);
+      if (obj != null) {
+        obj.destx = this.destx;
+        return obj.desty = this.desty;
+      }
+    };
+
+    return MouseCommand;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/command.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var Command, Serializable;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Serializable = require('./serializable.coffee').Serializable;
+
+  exports.Command = Command = (function() {
+
+    __extends(Command, Serializable);
+
+    Command.prototype.__type = 'Command';
+
+    function Command(id) {
+      this.id = id;
+      Command.__super__.constructor.apply(this, arguments);
+    }
+
+    Command.prototype.apply = function(state) {};
+
+    return Command;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/explode_command.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var Command, ExplodeCommand;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Command = require('./command.coffee').Command;
+
+  exports.ExplodeCommand = ExplodeCommand = (function() {
+
+    __extends(ExplodeCommand, Command);
+
+    ExplodeCommand.prototype.__type = 'ExplodeCommand';
+
+    function ExplodeCommand(id) {
+      this.id = id;
+      ExplodeCommand.__super__.constructor.call(this, this.id);
+    }
+
+    ExplodeCommand.prototype.apply = function(state) {
+      var obj;
+      obj = state.getObject(this.id);
+      if (obj != null) return obj.explode(state);
+    };
+
+    return ExplodeCommand;
 
   })();
 

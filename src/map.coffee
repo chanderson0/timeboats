@@ -6,18 +6,27 @@ Point = require('./point.coffee').Point
 
 exports.Map = class Map extends GameObject
   __type: 'Map'
+  instance = null
 
   @CELL_SIZE_PX: 16
 
-  constructor: (@width, @height) ->
+  #singleton instantiator
+  @getInstance: ->
+    if not instance?
+      instance = new @
+    return instance
+
+  # DO NOT CALL the constructor publicly. Use getInstance() instead
+  constructor: ->
+    @width = 0
+    @height = 0
     @cells = []
     @isInitialized = false
     @random = null
     @waterLevel = 5
     super
 
-  clone: ->
-    new Map(@width, @height)
+  clone: -> instance
 
   update: (dt) ->
 
@@ -64,6 +73,22 @@ exports.Map = class Map extends GameObject
             x = xFinish + 1
             y = yFinish + 1
 
+  # damage the terrain at (x, y) in a circle with radius (radius) pixels.
+  damageAt: (x, y, radius) ->
+    if @isInitialized
+      radius = Math.ceil(radius / Map.CELL_SIZE_PX)
+      x = @.getCellAt(x)
+      y = @.getCellAt(y)
+      g = new Gaussian(radius * 0.8)
+      for xG in [x - radius..x + radius]
+        for yG in [y - radius..y + radius]
+            if xG >= 0 and xG < @width and yG >= 0 and yG < @height
+              @cells[xG][yG].altitude -= g.get2d(xG - x, yG - y) * 5.0
+              if @cells[xG][yG].altitude < 0
+                @cells[xG][yG].altitude = 0
+              if @cells[xG][yG].altitude < @waterLevel
+                @cells[xG][yG].isPlant = false
+
 
   getCellAt: (p) ->
     Math.floor(p / Map.CELL_SIZE_PX)
@@ -73,7 +98,9 @@ exports.Map = class Map extends GameObject
   # map generation methods
   # calling generate(seed) should deterministically generate a pseudorandom map based on seed.
 
-  generate: (seed) ->
+  generate: (width, height, seed) ->
+    @width = width
+    @height = height
     @random = new Random(seed)
 
     # initialize a blank map

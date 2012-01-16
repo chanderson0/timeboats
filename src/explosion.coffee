@@ -1,5 +1,6 @@
 GameObject = require('./game_object.coffee').GameObject
 Point = require('./point.coffee').Point
+Map = require('./map.coffee').Map
 
 exports.Explosion = class Explosion extends GameObject
   __type: 'Explosion'
@@ -7,6 +8,7 @@ exports.Explosion = class Explosion extends GameObject
   constructor: (@id, @x, @y, @max_radius) ->
     super @id, @x, @y
     @radius = 0
+    Map.getInstance().damageAt @x, @y, @max_radius
 
   clone: ->
     exp = new Explosion @id, @x, @y, @max_radius
