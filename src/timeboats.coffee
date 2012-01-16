@@ -20,7 +20,9 @@ exports.Timeboats = class Timeboats
 
     @message = 'not recording'
 
-    Map.getInstance().generate @width / Map.CELL_SIZE_PX, @height / Map.CELL_SIZE_PX, new Date().getTime()
+    Map.getInstance().generate @width / Map.CELL_SIZE_PX, 
+      @height / Map.CELL_SIZE_PX, 
+      new Date().getTime()
 
   playClick: ->
     if @gamestate == "init"
@@ -122,7 +124,8 @@ exports.Timeboats = class Timeboats
             player_count++
 
         if player_count == 0
-          @frame_history.splice @frame_num + 1, @frame_history.length - @frame_num
+          @frame_history.splice @frame_num + 1, 
+            @frame_history.length - @frame_num
           @updateSlider(@frame_num, @frame_num)
           @updateState "recording", "paused"
 
