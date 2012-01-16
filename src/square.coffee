@@ -44,3 +44,6 @@ exports.Square = class Square extends GameObject2D
     context.rotate @rotation
     context.fillRect -@size/2, -@size/2, @size, @size
     context.restore()
+
+  collide: (state) ->
+      @.explode state

@@ -104,6 +104,10 @@ exports.Timeboats = class Timeboats
       next_state = @frame_history[@frame_num].clone()
       next_state.setCommands (@command_history[@frame_num] || [])
       next_state.update dt
+      for id, object of next_state.objects
+        if object.__type == 'Square'
+          @map.collideWith object, next_state
+          break
 
       @frame_num++
       if @frame_history.length > @frame_num

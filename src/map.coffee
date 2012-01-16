@@ -2,6 +2,7 @@ GameObject = require('./game_object').GameObject
 MapCell = require('./map_cell.coffee').MapCell
 Random = require('./random.coffee').Random
 Gaussian = require('./gaussian.coffee').Gaussian
+Point = require('./point.coffee').Point
 
 exports.Map = class Map extends GameObject
   __type: 'Map'
@@ -43,13 +44,42 @@ exports.Map = class Map extends GameObject
 
           context.restore()
 
-  # map generation code follows.
+  # collision methods
+  # collideWith(obj) expects a GameObject2D instance.
+  # if the map collides with obj, it invokes obj.collide().
+
+  collideWith: (obj, state) ->
+    if @isInitialized
+      xStart = @.getCellAt(obj.x - obj.radius)
+      yStart = @.getCellAt(obj.y - obj.radius)
+      xFinish = @.getCellAt(obj.x + obj.radius)
+      yFinish = @.getCellAt(obj.y + obj.radius)
+
+      collided = false
+      for x in [xStart..xFinish]
+        for y in [yStart..yFinish]
+          if @cells[x][y].altitude >= @waterLevel # collision with terrain
+            obj.collide state
+            collided = true
+            x = xFinish + 1
+            y = yFinish + 1
+
+
+  getCellAt: (p) ->
+    Math.floor(p / Map.CELL_SIZE_PX)
+
+
+
+  # map generation methods
   # calling generate(seed) should deterministically generate a pseudorandom map based on seed.
 
   generate: (seed) ->
     @random = new Random(seed)
 
     # initialize a blank map
+    @isInitialized = false
+    @cells = []
+
     for x in [0..@width - 1]
       col = []
       for y in [0..@height - 1]

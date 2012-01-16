@@ -459,11 +459,19 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.update = function(dt) {
-      var id, next_state, object, player_count, _ref;
+      var id, next_state, object, player_count, _ref, _ref2;
       if (this.gamestate === "recording") {
         next_state = this.frame_history[this.frame_num].clone();
         next_state.setCommands(this.command_history[this.frame_num] || []);
         next_state.update(dt);
+        _ref = next_state.objects;
+        for (id in _ref) {
+          object = _ref[id];
+          if (object.__type === 'Square') {
+            this.map.collideWith(object, next_state);
+            break;
+          }
+        }
         this.frame_num++;
         if (this.frame_history.length > this.frame_num) {
           this.frame_history[this.frame_num] = next_state;
@@ -473,9 +481,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.updateSlider(this.frame_num, this.frame_history.length - 1);
         if (this.frame_num > 0) {
           player_count = 0;
-          _ref = next_state.objects;
-          for (id in _ref) {
-            object = _ref[id];
+          _ref2 = next_state.objects;
+          for (id in _ref2) {
+            object = _ref2[id];
             if (object.__type === 'Square' || object.__type === 'Explosion') {
               player_count++;
             }
@@ -740,6 +748,10 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       return context.restore();
     };
 
+    Square.prototype.collide = function(state) {
+      return this.explode(state);
+    };
+
     return Square;
 
   })();
@@ -763,18 +775,19 @@ require.define("/game_object_2d.coffee", function (require, module, exports, __d
 
     GameObject2D.prototype.__type = 'GameObject2D';
 
-    function GameObject2D(id, x, y, vx, vy, rotation) {
+    function GameObject2D(id, x, y, vx, vy, rotation, radius) {
       this.id = id;
       this.x = x != null ? x : 0;
       this.y = y != null ? y : 0;
       this.vx = vx != null ? vx : 0;
       this.vy = vy != null ? vy : 0;
       this.rotation = rotation != null ? rotation : 0;
+      this.radius = radius != null ? radius : 0;
       GameObject2D.__super__.constructor.call(this, this.id);
     }
 
     GameObject2D.prototype.clone = function() {
-      return new GameObject2D(this.id, this.x, this.y, this.vx, this.vy, this.rotation);
+      return new GameObject2D(this.id, this.x, this.y, this.vx, this.vy, this.rotation, this.radius);
     };
 
     GameObject2D.prototype.setPos = function(x, y) {
@@ -794,6 +807,11 @@ require.define("/game_object_2d.coffee", function (require, module, exports, __d
       var newPos;
       newPos = Point.add(this.x, this.y, this.vx * dt, this.vy * dt);
       return this.setPos(newPos.x, newPos.y);
+    };
+
+    GameObject2D.prototype.collide = function(state) {
+      this.vx = 0;
+      return this.vy = 0;
     };
 
     return GameObject2D;
@@ -1064,7 +1082,7 @@ require.define("/explode_command.coffee", function (require, module, exports, __
 
 require.define("/map.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var GameObject, Gaussian, Map, MapCell, Random;
+  var GameObject, Gaussian, Map, MapCell, Point, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject = require('./game_object').GameObject;
@@ -1074,6 +1092,8 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
   Random = require('./random.coffee').Random;
 
   Gaussian = require('./gaussian.coffee').Gaussian;
+
+  Point = require('./point.coffee').Point;
 
   exports.Map = Map = (function() {
 
@@ -1131,9 +1151,45 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       }
     };
 
+    Map.prototype.collideWith = function(obj, state) {
+      var collided, x, xFinish, xStart, y, yFinish, yStart, _results;
+      if (this.isInitialized) {
+        xStart = this.getCellAt(obj.x - obj.radius);
+        yStart = this.getCellAt(obj.y - obj.radius);
+        xFinish = this.getCellAt(obj.x + obj.radius);
+        yFinish = this.getCellAt(obj.y + obj.radius);
+        collided = false;
+        _results = [];
+        for (x = xStart; xStart <= xFinish ? x <= xFinish : x >= xFinish; xStart <= xFinish ? x++ : x--) {
+          _results.push((function() {
+            var _results2;
+            _results2 = [];
+            for (y = yStart; yStart <= yFinish ? y <= yFinish : y >= yFinish; yStart <= yFinish ? y++ : y--) {
+              if (this.cells[x][y].altitude >= this.waterLevel) {
+                obj.collide(state);
+                collided = true;
+                x = xFinish + 1;
+                _results2.push(y = yFinish + 1);
+              } else {
+                _results2.push(void 0);
+              }
+            }
+            return _results2;
+          }).call(this));
+        }
+        return _results;
+      }
+    };
+
+    Map.prototype.getCellAt = function(p) {
+      return Math.floor(p / Map.CELL_SIZE_PX);
+    };
+
     Map.prototype.generate = function(seed) {
       var col, i, numGaussians, x, y, _ref, _ref2, _ref3, _ref4;
       this.random = new Random(seed);
+      this.isInitialized = false;
+      this.cells = [];
       for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
         col = [];
         for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
