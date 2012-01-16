@@ -10,3 +10,6 @@ exports.Random = class Random
   next: ->
     @last = ((1664525 * @last) + 1013904223) % Random.MAX
     return @last
+
+  nextf: ->
+    @.next() / Random.MAX

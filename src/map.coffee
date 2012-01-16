@@ -1,6 +1,7 @@
 GameObject = require('./game_object').GameObject
 MapCell = require('./map_cell.coffee').MapCell
 Random = require('./random.coffee').Random
+Gaussian = require('./gaussian.coffee').Gaussian
 
 exports.Map = class Map extends GameObject
   __type: 'Map'
@@ -10,6 +11,8 @@ exports.Map = class Map extends GameObject
   constructor: (@width, @height) ->
     @cells = []
     @isInitialized = false
+    @random = null
+    @waterLevel = 5
     super
 
   clone: ->
@@ -22,21 +25,85 @@ exports.Map = class Map extends GameObject
     if @isInitialized
       for x in [0..@width - 1]
         for y in [0..@height - 1]
-          val = 40 + @cells[x][y].altitude * 20
-          half_val = val / 2
           context.save()
           context.translate x * Map.CELL_SIZE_PX, y * Map.CELL_SIZE_PX
-          context.fillStyle = "rgb(0, #{half_val}, #{val})"
+
+          bVal = Math.floor(40 + @cells[x][y].altitude * 10)
+          rgVal = Math.floor(bVal * 0.9)
+          context.fillStyle = "rgba(#{rgVal}, #{rgVal}, #{bVal}, 1)"
           context.fillRect 0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
+
+          if @cells[x][y].isPlant
+            context.fillStyle="rgba(72, 105, 87, 0.8)"
+            context.fillRect 0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
+
+          if @cells[x][y].altitude < @waterLevel
+            context.fillStyle = "rgba(60, 110, 150, 0.5)"
+            context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX)
+
           context.restore()
 
-
+  # map generation code follows.
+  # calling generate(seed) should deterministically generate a pseudorandom map based on seed.
 
   generate: (seed) ->
-    random = new Random(seed)
+    @random = new Random(seed)
+
+    # initialize a blank map
     for x in [0..@width - 1]
       col = []
       for y in [0..@height - 1]
-        col.push new MapCell(random.next() % 10)
+        col.push new MapCell(0)
       @cells.push col
+
+    # raise the terrain by swiping gaussians across it
+
+    # first some big wide ones
+    @.swipeGaussian(12, 14, 15)
+    @.swipeGaussian(12, 14, 15)
+
+    # now some medium ones
+    numGaussians = 1 + @random.next() % 3
+    for i in [1..numGaussians]
+      @.swipeGaussian(6, 8, 4 + @random.next() % 10)
+
+    # finally some narrow tall ones
+    numGaussians = 1 + @random.next() % 4
+    for i in [1..numGaussians]
+      @.swipeGaussian(3, 6, 6)
+
+    # now discretize our altitudes
+    # and also make some cells trees.
+    for x in [0..@width - 1]
+      for y in [0..@height - 1]
+        if @cells[x][y].altitude > @waterLevel + 1 and (@cells[x][y].altitude - @waterLevel - 1) * 0.03 > @random.nextf()
+          @cells[x][y].isPlant = true
+        @cells[x][y].altitude = Math.floor(@cells[x][y].altitude)
+
     @isInitialized = true
+
+  swipeGaussian: (variance, radius, gaussLife) ->
+    gaussX = @random.next() % @width
+    gaussY = @random.next() % @height
+    gaussVelX = 0.5 + (@random.nextf() * 3.0)
+    gaussVelY = 0.5 + (@random.nextf() * 3.0)
+    gaussAccX = -0.2 + (@random.nextf() * 0.2)
+    gaussAccY = -0.2 + (@random.nextf() * 0.2)
+
+    # console.log "swipeGaussian starting at (#{gaussX},#{gaussY}) with vel (#{gaussVelX},#{gaussVelY}) and life #{gaussLife}"
+
+    g = new Gaussian(variance)
+    g.compute(-radius, radius, -radius, radius)
+    for i in [1..gaussLife]
+      @.applyGaussian(g, radius, Math.floor(gaussX), Math.floor(gaussY))
+      gaussX += gaussVelX
+      gaussY += gaussVelY
+      gaussVelX += gaussAccX
+      gaussVelY += gaussAccY
+
+  applyGaussian: (g, radius, xCenter, yCenter) ->
+    radius = Math.ceil(radius)
+    for x in [xCenter - radius..xCenter + radius]
+      for y in [yCenter - radius..yCenter + radius]
+        if x >= 0 and x < @width and y >= 0 and y < @height
+          @cells[x][y].altitude += g.get2d(x - xCenter, y - yCenter) * 100.0

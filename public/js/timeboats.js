@@ -374,7 +374,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.player_id = 1;
       this.message = 'not recording';
       this.map = new Map(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX);
-      this.map.generate(42);
+      this.map.generate(new Date().getTime());
     }
 
     Timeboats.prototype.playClick = function() {
@@ -1049,7 +1049,7 @@ require.define("/explode_command.coffee", function (require, module, exports, __
 
 require.define("/map.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var GameObject, Map, MapCell, Random;
+  var GameObject, Gaussian, Map, MapCell, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject = require('./game_object').GameObject;
@@ -1057,6 +1057,8 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
   MapCell = require('./map_cell.coffee').MapCell;
 
   Random = require('./random.coffee').Random;
+
+  Gaussian = require('./gaussian.coffee').Gaussian;
 
   exports.Map = Map = (function() {
 
@@ -1071,6 +1073,8 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       this.height = height;
       this.cells = [];
       this.isInitialized = false;
+      this.random = null;
+      this.waterLevel = 5;
       Map.__super__.constructor.apply(this, arguments);
     }
 
@@ -1081,7 +1085,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     Map.prototype.update = function(dt) {};
 
     Map.prototype.draw = function(context) {
-      var half_val, val, x, y, _ref, _results;
+      var bVal, rgVal, x, y, _ref, _results;
       if (this.isInitialized) {
         _results = [];
         for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
@@ -1089,12 +1093,20 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
             var _ref2, _results2;
             _results2 = [];
             for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
-              val = 40 + this.cells[x][y].altitude * 20;
-              half_val = val / 2;
               context.save();
               context.translate(x * Map.CELL_SIZE_PX, y * Map.CELL_SIZE_PX);
-              context.fillStyle = "rgb(0, " + half_val + ", " + val + ")";
+              bVal = Math.floor(40 + this.cells[x][y].altitude * 10);
+              rgVal = Math.floor(bVal * 0.9);
+              context.fillStyle = "rgba(" + rgVal + ", " + rgVal + ", " + bVal + ", 1)";
               context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
+              if (this.cells[x][y].isPlant) {
+                context.fillStyle = "rgba(72, 105, 87, 0.8)";
+                context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
+              }
+              if (this.cells[x][y].altitude < this.waterLevel) {
+                context.fillStyle = "rgba(60, 110, 150, 0.5)";
+                context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
+              }
               _results2.push(context.restore());
             }
             return _results2;
@@ -1105,16 +1117,76 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.generate = function(seed) {
-      var col, random, x, y, _ref, _ref2;
-      random = new Random(seed);
+      var col, i, numGaussians, x, y, _ref, _ref2, _ref3, _ref4;
+      this.random = new Random(seed);
       for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
         col = [];
         for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
-          col.push(new MapCell(random.next() % 10));
+          col.push(new MapCell(0));
         }
         this.cells.push(col);
       }
+      this.swipeGaussian(12, 14, 15);
+      this.swipeGaussian(12, 14, 15);
+      numGaussians = 1 + this.random.next() % 3;
+      for (i = 1; 1 <= numGaussians ? i <= numGaussians : i >= numGaussians; 1 <= numGaussians ? i++ : i--) {
+        this.swipeGaussian(6, 8, 4 + this.random.next() % 10);
+      }
+      numGaussians = 1 + this.random.next() % 4;
+      for (i = 1; 1 <= numGaussians ? i <= numGaussians : i >= numGaussians; 1 <= numGaussians ? i++ : i--) {
+        this.swipeGaussian(3, 6, 6);
+      }
+      for (x = 0, _ref3 = this.width - 1; 0 <= _ref3 ? x <= _ref3 : x >= _ref3; 0 <= _ref3 ? x++ : x--) {
+        for (y = 0, _ref4 = this.height - 1; 0 <= _ref4 ? y <= _ref4 : y >= _ref4; 0 <= _ref4 ? y++ : y--) {
+          if (this.cells[x][y].altitude > this.waterLevel + 1 && (this.cells[x][y].altitude - this.waterLevel - 1) * 0.03 > this.random.nextf()) {
+            this.cells[x][y].isPlant = true;
+          }
+          this.cells[x][y].altitude = Math.floor(this.cells[x][y].altitude);
+        }
+      }
       return this.isInitialized = true;
+    };
+
+    Map.prototype.swipeGaussian = function(variance, radius, gaussLife) {
+      var g, gaussAccX, gaussAccY, gaussVelX, gaussVelY, gaussX, gaussY, i, _results;
+      gaussX = this.random.next() % this.width;
+      gaussY = this.random.next() % this.height;
+      gaussVelX = 0.5 + (this.random.nextf() * 3.0);
+      gaussVelY = 0.5 + (this.random.nextf() * 3.0);
+      gaussAccX = -0.2 + (this.random.nextf() * 0.2);
+      gaussAccY = -0.2 + (this.random.nextf() * 0.2);
+      g = new Gaussian(variance);
+      g.compute(-radius, radius, -radius, radius);
+      _results = [];
+      for (i = 1; 1 <= gaussLife ? i <= gaussLife : i >= gaussLife; 1 <= gaussLife ? i++ : i--) {
+        this.applyGaussian(g, radius, Math.floor(gaussX), Math.floor(gaussY));
+        gaussX += gaussVelX;
+        gaussY += gaussVelY;
+        gaussVelX += gaussAccX;
+        _results.push(gaussVelY += gaussAccY);
+      }
+      return _results;
+    };
+
+    Map.prototype.applyGaussian = function(g, radius, xCenter, yCenter) {
+      var x, y, _ref, _ref2, _results;
+      radius = Math.ceil(radius);
+      _results = [];
+      for (x = _ref = xCenter - radius, _ref2 = xCenter + radius; _ref <= _ref2 ? x <= _ref2 : x >= _ref2; _ref <= _ref2 ? x++ : x--) {
+        _results.push((function() {
+          var _ref3, _ref4, _results2;
+          _results2 = [];
+          for (y = _ref3 = yCenter - radius, _ref4 = yCenter + radius; _ref3 <= _ref4 ? y <= _ref4 : y >= _ref4; _ref3 <= _ref4 ? y++ : y--) {
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+              _results2.push(this.cells[x][y].altitude += g.get2d(x - xCenter, y - yCenter) * 100.0);
+            } else {
+              _results2.push(void 0);
+            }
+          }
+          return _results2;
+        }).call(this));
+      }
+      return _results;
     };
 
     return Map;
@@ -1140,6 +1212,7 @@ require.define("/map_cell.coffee", function (require, module, exports, __dirname
 
     function MapCell(altitude) {
       this.altitude = altitude;
+      this.isPlant = false;
       MapCell.__super__.constructor.apply(this, arguments);
     }
 
@@ -1176,7 +1249,67 @@ require.define("/random.coffee", function (require, module, exports, __dirname, 
       return this.last;
     };
 
+    Random.prototype.nextf = function() {
+      return this.next() / Random.MAX;
+    };
+
     return Random;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/gaussian.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var Gaussian;
+
+  exports.Gaussian = Gaussian = (function() {
+
+    Gaussian.prototype.__type = 'Gaussian';
+
+    function Gaussian(variance) {
+      this.denominator = 2.0 * variance;
+      this.a = 1.0 / Math.sqrt(variance * 2.0 * Math.PI);
+      this.xMin = 0;
+      this.yMin = 0;
+      this.clear();
+    }
+
+    Gaussian.prototype.compute = function(xMin, xMax, yMin, yMax) {
+      var col, x, y;
+      this.clear();
+      this.xMin = xMin;
+      this.yMin = yMin;
+      for (x = xMin; xMin <= xMax ? x <= xMax : x >= xMax; xMin <= xMax ? x++ : x--) {
+        col = [];
+        for (y = yMin; yMin <= yMax ? y <= yMax : y >= yMax; yMin <= yMax ? y++ : y--) {
+          col.push(this.get2d(x, y));
+        }
+        this.cache.push(col);
+      }
+      return this.cached = true;
+    };
+
+    Gaussian.prototype.clear = function() {
+      this.cache = [];
+      return this.cached = false;
+    };
+
+    Gaussian.prototype.get2d = function(x, y) {
+      if (this.cached) {
+        return this.cache[x - this.xMin][y - this.yMin];
+      } else {
+        return this.get(x) * this.get(y);
+      }
+    };
+
+    Gaussian.prototype.get = function(x) {
+      return this.a * Math.pow(Math.E, -(x * x) / this.denominator);
+    };
+
+    return Gaussian;
 
   })();
 

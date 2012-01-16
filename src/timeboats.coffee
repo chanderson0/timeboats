@@ -21,7 +21,7 @@ exports.Timeboats = class Timeboats
     @message = 'not recording'
 
     @map = new Map @width / Map.CELL_SIZE_PX, @height / Map.CELL_SIZE_PX
-    @map.generate 42
+    @map.generate new Date().getTime()
 
   playClick: ->
     if @gamestate == "init"
