@@ -11,6 +11,7 @@ exports.Square = class Square extends GameObject2D
 
     @destx = @x
     @desty = @y
+    @radius = @size / 2
 
   clone: ->
     sq = new Square @id, @x, @y, @size
@@ -38,7 +39,7 @@ exports.Square = class Square extends GameObject2D
 
     @setVel to_move.x, to_move.y
 
-    Map.getInstance().collideWith(@, state)
+    Map.getInstance().collideWith(@, state, true)
 
     super dt, state
 

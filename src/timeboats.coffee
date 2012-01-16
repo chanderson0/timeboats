@@ -99,6 +99,8 @@ exports.Timeboats = class Timeboats
     @command_history[@frame_num].push command
 
   update: (dt) ->
+    Map.getInstance().update dt
+
     if @gamestate == "recording"
       next_state = @frame_history[@frame_num].clone()
       next_state.setCommands (@command_history[@frame_num] || [])

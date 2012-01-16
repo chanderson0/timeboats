@@ -24,12 +24,21 @@ exports.Map = class Map extends GameObject
     @isInitialized = false
     @random = null
     @waterLevel = 5
+    @waterDt = 0
     super
 
   clone: -> instance
 
   update: (dt) ->
-
+    @waterDt += dt
+    if (@waterDt >= 1 / 10)
+      @waterDt = 0
+      if @isInitialized
+        for x in [0..@width - 1]
+          for y in [0..@height - 1]
+            @cells[x][y].excitement *= 0.9
+            if (@random.nextf() > 0.97)
+              @cells[x][y].excitement += -0.3 + @random.nextf() * 0.6
 
   draw: (context) ->
     if @isInitialized
@@ -48,7 +57,8 @@ exports.Map = class Map extends GameObject
             context.fillRect 0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
 
           if @cells[x][y].altitude < @waterLevel
-            context.fillStyle = "rgba(60, 110, 150, 0.5)"
+            alpha = 0.5 + @cells[x][y].excitement * 0.2
+            context.fillStyle = "rgba(60, 110, 150, #{alpha})"
             context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX)
 
           context.restore()
@@ -57,7 +67,7 @@ exports.Map = class Map extends GameObject
   # collideWith(obj) expects a GameObject2D instance.
   # if the map collides with obj, it invokes obj.collide().
 
-  collideWith: (obj, state) ->
+  collideWith: (obj, state, disturb = false) ->
     if @isInitialized
       xStart = @.getCellAt(obj.x - obj.radius)
       yStart = @.getCellAt(obj.y - obj.radius)
@@ -67,11 +77,15 @@ exports.Map = class Map extends GameObject
       collided = false
       for x in [xStart..xFinish]
         for y in [yStart..yFinish]
+          if disturb
+            @cells[x][y].excitement = 0.7
           if @cells[x][y].altitude >= @waterLevel # collision with terrain
-            obj.collide state
-            collided = true
-            x = xFinish + 1
-            y = yFinish + 1
+            if not collided
+              obj.collide state
+              collided = true
+              if not disturb
+                x = xFinish + 1
+                y = yFinish + 1
 
   # damage the terrain at (x, y) in a circle with radius (radius) pixels.
   damageAt: (x, y, radius) ->

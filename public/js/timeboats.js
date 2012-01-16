@@ -459,6 +459,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 
     Timeboats.prototype.update = function(dt) {
       var id, next_state, object, player_count, _ref;
+      Map.getInstance().update(dt);
       if (this.gamestate === "recording") {
         next_state = this.frame_history[this.frame_num].clone();
         next_state.setCommands(this.command_history[this.frame_num] || []);
@@ -696,6 +697,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       Square.__super__.constructor.call(this, this.id, this.x, this.y);
       this.destx = this.x;
       this.desty = this.y;
+      this.radius = this.size / 2;
     }
 
     Square.prototype.clone = function() {
@@ -730,7 +732,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
         this.setPos(this.destx, this.desty);
       }
       this.setVel(to_move.x, to_move.y);
-      Map.getInstance().collideWith(this, state);
+      Map.getInstance().collideWith(this, state, true);
       return Square.__super__.update.call(this, dt, state);
     };
 
@@ -1018,6 +1020,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       this.isInitialized = false;
       this.random = null;
       this.waterLevel = 5;
+      this.waterDt = 0;
       Map.__super__.constructor.apply(this, arguments);
     }
 
@@ -1025,10 +1028,35 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       return instance;
     };
 
-    Map.prototype.update = function(dt) {};
+    Map.prototype.update = function(dt) {
+      var x, y, _ref, _results;
+      this.waterDt += dt;
+      if (this.waterDt >= 1 / 10) {
+        this.waterDt = 0;
+        if (this.isInitialized) {
+          _results = [];
+          for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
+            _results.push((function() {
+              var _ref2, _results2;
+              _results2 = [];
+              for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
+                this.cells[x][y].excitement *= 0.9;
+                if (this.random.nextf() > 0.97) {
+                  _results2.push(this.cells[x][y].excitement += -0.3 + this.random.nextf() * 0.6);
+                } else {
+                  _results2.push(void 0);
+                }
+              }
+              return _results2;
+            }).call(this));
+          }
+          return _results;
+        }
+      }
+    };
 
     Map.prototype.draw = function(context) {
-      var bVal, rgVal, x, y, _ref, _results;
+      var alpha, bVal, rgVal, x, y, _ref, _results;
       if (this.isInitialized) {
         _results = [];
         for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
@@ -1047,7 +1075,8 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
                 context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
               }
               if (this.cells[x][y].altitude < this.waterLevel) {
-                context.fillStyle = "rgba(60, 110, 150, 0.5)";
+                alpha = 0.5 + this.cells[x][y].excitement * 0.2;
+                context.fillStyle = "rgba(60, 110, 150, " + alpha + ")";
                 context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
               }
               _results2.push(context.restore());
@@ -1059,8 +1088,9 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       }
     };
 
-    Map.prototype.collideWith = function(obj, state) {
+    Map.prototype.collideWith = function(obj, state, disturb) {
       var collided, x, xFinish, xStart, y, yFinish, yStart, _results;
+      if (disturb == null) disturb = false;
       if (this.isInitialized) {
         xStart = this.getCellAt(obj.x - obj.radius);
         yStart = this.getCellAt(obj.y - obj.radius);
@@ -1073,11 +1103,20 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
             var _results2;
             _results2 = [];
             for (y = yStart; yStart <= yFinish ? y <= yFinish : y >= yFinish; yStart <= yFinish ? y++ : y--) {
+              if (disturb) this.cells[x][y].excitement = 0.7;
               if (this.cells[x][y].altitude >= this.waterLevel) {
-                obj.collide(state);
-                collided = true;
-                x = xFinish + 1;
-                _results2.push(y = yFinish + 1);
+                if (!collided) {
+                  obj.collide(state);
+                  collided = true;
+                  if (!disturb) {
+                    x = xFinish + 1;
+                    _results2.push(y = yFinish + 1);
+                  } else {
+                    _results2.push(void 0);
+                  }
+                } else {
+                  _results2.push(void 0);
+                }
               } else {
                 _results2.push(void 0);
               }
@@ -1228,6 +1267,7 @@ require.define("/map_cell.coffee", function (require, module, exports, __dirname
     function MapCell(altitude) {
       this.altitude = altitude;
       this.isPlant = false;
+      this.excitement = 0;
       MapCell.__super__.constructor.apply(this, arguments);
     }
 

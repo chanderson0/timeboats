@@ -5,6 +5,7 @@ exports.MapCell = class MapCell extends GameObject
 
   constructor: (@altitude) ->
     @isPlant = false
+    @excitement = 0
     super
 
   clone: ->
