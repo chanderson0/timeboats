@@ -1046,7 +1046,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
 
     instance = null;
 
-    Map.CELL_SIZE_PX = 16;
+    Map.CELL_SIZE_PX = 12;
 
     Map.getInstance = function() {
       if (!(instance != null)) instance = new this;
@@ -1096,35 +1096,34 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.draw = function(context) {
-      var alpha, bVal, rgVal, x, y, _ref, _results;
+      var alpha, b, cellX, cellY, g, landAlpha, r, waterAlpha, x, y, _ref, _ref2;
       if (this.isInitialized) {
-        _results = [];
+        context.save();
         for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
-          _results.push((function() {
-            var _ref2, _results2;
-            _results2 = [];
-            for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
-              context.save();
-              context.translate(x * Map.CELL_SIZE_PX, y * Map.CELL_SIZE_PX);
-              bVal = Math.floor(40 + this.cells[x][y].altitude * 10);
-              rgVal = Math.floor(bVal * 0.9);
-              context.fillStyle = "rgba(" + rgVal + ", " + rgVal + ", " + bVal + ", 1)";
-              context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
-              if (this.cells[x][y].isPlant) {
-                context.fillStyle = "rgba(72, 105, 87, 0.8)";
-                context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
-              }
-              if (this.cells[x][y].altitude < this.waterLevel) {
-                alpha = 0.5 + this.cells[x][y].excitement * 0.2;
-                context.fillStyle = "rgba(60, 110, 150, " + alpha + ")";
-                context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
-              }
-              _results2.push(context.restore());
+          for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
+            cellX = x * Map.CELL_SIZE_PX;
+            cellY = y * Map.CELL_SIZE_PX;
+            b = Math.floor(40 + this.cells[x][y].altitude * 10);
+            r = Math.floor(b * 0.9);
+            g = r;
+            if (this.cells[x][y].altitude < this.waterLevel) {
+              alpha = 0.5 + this.cells[x][y].excitement * 0.2;
+              landAlpha = 1 / (1 + alpha);
+              waterAlpha = alpha / (1 + alpha);
+              r = Math.floor(r * landAlpha + 60.0 * waterAlpha);
+              g = Math.floor(g * landAlpha + 110.0 * waterAlpha);
+              b = Math.floor(b * landAlpha + 150.0 * waterAlpha);
             }
-            return _results2;
-          }).call(this));
+            if (this.cells[x][y].isPlant) {
+              r = Math.floor(r * 0.2 + 72 * 0.8);
+              g = Math.floor(g * 0.2 + 105 * 0.8);
+              b = Math.floor(b * 0.2 + 87 * 0.8);
+            }
+            context.fillStyle = "rgba(" + r + ", " + g + ", " + b + ", 1)";
+            context.fillRect(cellX, cellY, cellX + Map.CELL_SIZE_PX, cellY + Map.CELL_SIZE_PX);
+          }
         }
-        return _results;
+        return context.restore();
       }
     };
 
@@ -1220,15 +1219,15 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
         }
         this.cells.push(col);
       }
-      this.swipeGaussian(12, 14, 15);
-      this.swipeGaussian(12, 14, 15);
+      this.swipeGaussian(18, 20, 30);
+      this.swipeGaussian(18, 20, 30);
       numGaussians = 1 + this.random.next() % 3;
       for (i = 1; 1 <= numGaussians ? i <= numGaussians : i >= numGaussians; 1 <= numGaussians ? i++ : i--) {
-        this.swipeGaussian(6, 8, 4 + this.random.next() % 10);
+        this.swipeGaussian(12, 14, 6 + this.random.next() % 15);
       }
       numGaussians = 1 + this.random.next() % 4;
       for (i = 1; 1 <= numGaussians ? i <= numGaussians : i >= numGaussians; 1 <= numGaussians ? i++ : i--) {
-        this.swipeGaussian(3, 6, 6);
+        this.swipeGaussian(7, 10, 10);
       }
       for (x = 0, _ref3 = this.width - 1; 0 <= _ref3 ? x <= _ref3 : x >= _ref3; 0 <= _ref3 ? x++ : x--) {
         for (y = 0, _ref4 = this.height - 1; 0 <= _ref4 ? y <= _ref4 : y >= _ref4; 0 <= _ref4 ? y++ : y--) {
