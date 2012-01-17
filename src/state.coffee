@@ -38,8 +38,8 @@ exports.State = class State extends Serializable
 
     true
 
-  draw: (context) ->
+  draw: (context, options) ->
     for id, object of @objects
-      object.draw context
+      object.draw context, dim: options.active != id
 
     true

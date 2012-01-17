@@ -342,16 +342,14 @@ exports.extname = function(path) {
 
 require.define("/timeboats.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var ExplodeCommand, Map, MouseCommand, Point, Square, State, Timeboats;
+  var Command, Map, Point, Square, State, Timeboats;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   State = require('./state.coffee').State;
 
   Square = require('./square.coffee').Square;
 
-  MouseCommand = require('./mouse_command.coffee').MouseCommand;
-
-  ExplodeCommand = require('./explode_command.coffee').ExplodeCommand;
+  Command = require('./command.coffee');
 
   Point = require('./point.coffee').Point;
 
@@ -359,7 +357,8 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 
   exports.Timeboats = Timeboats = (function() {
 
-    function Timeboats(context, width, height) {
+    function Timeboats(game, context, width, height) {
+      this.game = game;
       this.context = context;
       this.width = width;
       this.height = height;
@@ -371,13 +370,12 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.frame_history = [new State()];
       this.command_history = [];
       this.frame_num = 0;
-      this.player_id = 1;
-      this.message = 'not recording';
+      this.active_commands = [];
       Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, new Date().getTime());
     }
 
     Timeboats.prototype.playClick = function() {
-      if (this.gamestate === "init") {
+      if (this.gamestate === "init" || this.gamestate === "ready") {
         return this.updateState("init", "recording");
       } else if (this.gamestate === "recording") {
         return this.updateState("recording", "paused");
@@ -385,52 +383,74 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         return this.updateState("paused", "playing");
       } else if (this.gamestate === "playing") {
         return this.updateState("playing", "paused");
-      } else if (this.gamestate === "stopped") {
-        return this.updateState("stopped", "playing");
       }
     };
 
     Timeboats.prototype.addClick = function() {
-      if (this.gamestate !== "stopped") {
-        return this.updateState(this.gamestate, "stopped");
-      } else {
-        return this.updateState(this.gamestate, "recording");
-      }
+      return this.updateState(this.gamestate, "ready");
     };
 
     Timeboats.prototype.updateState = function(oldState, newState) {
-      var player;
+      var command, player;
       console.log(oldState, '->', newState);
-      if (newState === "recording") {
-        this.player_id++;
-        player = new Square(this.player_id, 100, 100, 20);
-        this.frame_history[this.frame_num].addObject(this.player_id, player);
+      if ((oldState === "init" || oldState === "ready") && newState === "recording") {
+        player = new Square(this.game.turn_id, 100, 100, 20, this.game.currentPlayer().color);
+        command = new Command.JoinCommand(player.id, player);
+        this.addCommand(this.command_history, command);
+        this.addCommand(this.active_commands, command);
         this.gamestate = "recording";
         $("#playbutton").html("Stop");
-        $("#addbutton").html("Rewind");
+        $("#playbutton").prop("disabled", true);
+        $("#addbutton").html("Ready Next");
         return $("#addbutton").prop("disabled", true);
+      } else if (oldState === "paused" && newState === "rerecording") {
+        this.gamestate = "rerecording";
+        $("#playbutton").html("Stop");
+        $("#playbutton").prop("disabled", true);
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", true);
+      } else if (oldState === "rerecording" && newState === "paused") {
+        this.gamestate = "paused";
+        this.frame_num = 0;
+        this.updateSlider(this.frame_num);
+        $("#playbutton").html("Play");
+        $("#playbutton").prop("disabled", false);
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", false);
       } else if (oldState === "recording" && newState === "paused") {
+        this.game.recordTurn(this.active_commands);
+        this.active_commands = [];
+        this.game.nextTurn();
         this.frame_num = 0;
         this.gamestate = "paused";
         this.updateSlider(this.frame_num);
         $("#playbutton").html("Play");
-        $("#addbutton").html("Rewind");
+        $("#playbutton").prop("disabled", false);
+        $("#addbutton").html("Ready Next");
         return $("#addbutton").prop("disabled", false);
-      } else if (newState === "playing") {
+      } else if (oldState === "paused" && newState === "playing") {
         this.gamestate = "playing";
         $("#playbutton").html("Pause");
-        return $("#addbutton").html("Rewind");
-      } else if (newState === "paused") {
-        this.gamestate = "paused";
-        $("#playbutton").html("Play");
-        return $("#addbutton").html("Rewind");
-      } else if (newState === "stopped") {
-        this.gamestate = "stopped";
-        this.message = "Done playback.";
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", true);
+      } else if (oldState === "paused" && newState === "ready") {
+        if (!this.game.isLatestTurn()) {
+          this.game.setTurn(this.game.latestTurnNumber());
+          this.command_history = this.game.computeCommands();
+          this.frame_num = 0;
+          this.frame_history = [this.frame_history[this.frame_num]];
+        }
+        this.gamestate = "ready";
         this.frame_num = 0;
         this.updateSlider(this.frame_num);
+        $("#playbutton").html("Start");
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", true);
+      } else if ((oldState === "playing" || oldState === "ready") && newState === "paused") {
+        this.gamestate = "paused";
         $("#playbutton").html("Play");
-        return $("#addbutton").html("Add New");
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", false);
       } else {
         return console.log("couldn't switch state");
       }
@@ -442,6 +462,17 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       if (max > 0) return $("#timeslider").prop('max', max);
     };
 
+    Timeboats.prototype.turnClicked = function(number) {
+      if (this.gamestate === "paused") {
+        this.game.setTurn(number);
+        this.command_history = this.game.computeCommands();
+        this.frame_num = 0;
+        this.frame_history = [this.frame_history[this.frame_num]];
+        this.updateSlider(this.frame_num);
+        return this.updateState("paused", "rerecording");
+      }
+    };
+
     Timeboats.prototype.sliderDrag = function(value) {
       if (this.gamestate === "paused") {
         return this.frame_num = value;
@@ -450,17 +481,17 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       }
     };
 
-    Timeboats.prototype.addCommand = function(command) {
-      while (this.frame_num >= this.command_history.length) {
-        this.command_history.push([]);
+    Timeboats.prototype.addCommand = function(buffer, command) {
+      while (this.frame_num >= buffer.length) {
+        buffer.push([]);
       }
-      return this.command_history[this.frame_num].push(command);
+      return buffer[this.frame_num].push(command);
     };
 
     Timeboats.prototype.update = function(dt) {
       var id, next_state, object, player_count, _ref;
       Map.getInstance().update(dt);
-      if (this.gamestate === "recording") {
+      if (this.gamestate === "recording" || this.gamestate === "rerecording") {
         next_state = this.frame_history[this.frame_num].clone();
         next_state.setCommands(this.command_history[this.frame_num] || []);
         next_state.update(dt);
@@ -483,14 +514,16 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
           if (player_count === 0) {
             this.frame_history.splice(this.frame_num + 1, this.frame_history.length - this.frame_num);
             this.updateSlider(this.frame_num, this.frame_num);
-            return this.updateState("recording", "paused");
+            return this.updateState(this.gamestate, "paused");
           }
         }
       } else if (this.gamestate === "playing") {
         this.frame_num++;
         this.updateSlider(this.frame_num);
         if (this.frame_num >= this.frame_history.length) {
-          return this.updateState("playing", "stopped");
+          this.updateState("playing", "paused");
+          this.frame_num = 0;
+          return this.updateSlider(this.frame_num);
         }
       } else if (this.gamestate === "paused") {
         return this.state = this.frame_history[this.frame_num];
@@ -500,25 +533,26 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     Timeboats.prototype.draw = function() {
       this.context.clearRect(0, 0, this.width + 1, this.height + 1);
       Map.getInstance().draw(this.context);
-      this.context.fillStyle = "white";
-      this.context.strokeStyle = "white";
-      this.frame_history[this.frame_num].draw(this.context);
-      return this.context.fillText(this.message, 10, 30);
+      return this.frame_history[this.frame_num].draw(this.context, {
+        active: this.game.turn_id
+      });
     };
 
     Timeboats.prototype.onMouseDown = function(e) {
       var command;
       if (this.gamestate === "recording") {
-        command = new ExplodeCommand(this.player_id);
-        return this.addCommand(command);
+        command = new Command.ExplodeCommand(this.game.turn_id);
+        this.addCommand(this.command_history, command);
+        return this.addCommand(this.active_commands, command);
       }
     };
 
     Timeboats.prototype.onMouseMove = function(e) {
       var command;
       if (this.gamestate === "recording") {
-        command = new MouseCommand(this.player_id, e[0], e[1]);
-        return this.addCommand(command);
+        command = new Command.MouseCommand(this.game.turn_id, e[0], e[1]);
+        this.addCommand(this.command_history, command);
+        return this.addCommand(this.active_commands, command);
       }
     };
 
@@ -597,12 +631,14 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
       return true;
     };
 
-    State.prototype.draw = function(context) {
+    State.prototype.draw = function(context, options) {
       var id, object, _ref;
       _ref = this.objects;
       for (id in _ref) {
         object = _ref[id];
-        object.draw(context);
+        object.draw(context, {
+          dim: options.active !== id
+        });
       }
       return true;
     };
@@ -689,11 +725,12 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 
     Square.prototype.__type = 'Square';
 
-    function Square(id, x, y, size) {
+    function Square(id, x, y, size, fill) {
       this.id = id;
       this.x = x;
       this.y = y;
       this.size = size;
+      this.fill = fill != null ? fill : "white";
       Square.__super__.constructor.call(this, this.id, this.x, this.y);
       this.destx = this.x;
       this.desty = this.y;
@@ -702,7 +739,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 
     Square.prototype.clone = function() {
       var sq;
-      sq = new Square(this.id, this.x, this.y, this.size);
+      sq = new Square(this.id, this.x, this.y, this.size, this.fill);
       sq.rotation = this.rotation;
       sq.vx = this.vx;
       sq.vy = this.vy;
@@ -736,8 +773,10 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       return Square.__super__.update.call(this, dt, state);
     };
 
-    Square.prototype.draw = function(context) {
+    Square.prototype.draw = function(context, options) {
       context.save();
+      if ((options != null) && options.dim) context.globalAlpha = 0.5;
+      context.fillStyle = this.fill;
       context.translate(this.x, this.y);
       context.rotate(this.rotation);
       context.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
@@ -967,6 +1006,7 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
     Explosion.prototype.draw = function(context) {
       context.save();
       context.translate(this.x, this.y);
+      context.strokeStyle = "white";
       context.beginPath();
       context.arc(0, 0, this.radius, 0, Math.PI * 2, true);
       context.closePath();
@@ -1372,14 +1412,31 @@ require.define("/gaussian.coffee", function (require, module, exports, __dirname
 
 });
 
-require.define("/mouse_command.coffee", function (require, module, exports, __dirname, __filename) {
+require.define("/command.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var Command, MouseCommand;
+  var Command, ExplodeCommand, JoinCommand, MouseCommand, Serializable;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  Command = require('./command.coffee').Command;
+  Serializable = require('./serializable.coffee').Serializable;
 
-  exports.MouseCommand = MouseCommand = (function() {
+  Command = Command = (function() {
+
+    __extends(Command, Serializable);
+
+    Command.prototype.__type = 'Command';
+
+    function Command(id) {
+      this.id = id;
+      Command.__super__.constructor.apply(this, arguments);
+    }
+
+    Command.prototype.apply = function(state) {};
+
+    return Command;
+
+  })();
+
+  MouseCommand = MouseCommand = (function() {
 
     __extends(MouseCommand, Command);
 
@@ -1405,46 +1462,7 @@ require.define("/mouse_command.coffee", function (require, module, exports, __di
 
   })();
 
-}).call(this);
-
-});
-
-require.define("/command.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var Command, Serializable;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  Serializable = require('./serializable.coffee').Serializable;
-
-  exports.Command = Command = (function() {
-
-    __extends(Command, Serializable);
-
-    Command.prototype.__type = 'Command';
-
-    function Command(id) {
-      this.id = id;
-      Command.__super__.constructor.apply(this, arguments);
-    }
-
-    Command.prototype.apply = function(state) {};
-
-    return Command;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/explode_command.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var Command, ExplodeCommand;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  Command = require('./command.coffee').Command;
-
-  exports.ExplodeCommand = ExplodeCommand = (function() {
+  ExplodeCommand = ExplodeCommand = (function() {
 
     __extends(ExplodeCommand, Command);
 
@@ -1465,44 +1483,280 @@ require.define("/explode_command.coffee", function (require, module, exports, __
 
   })();
 
+  JoinCommand = JoinCommand = (function() {
+
+    __extends(JoinCommand, Command);
+
+    JoinCommand.prototype.__type = 'JoinCommand';
+
+    function JoinCommand(id, player) {
+      this.id = id;
+      this.player = player;
+      JoinCommand.__super__.constructor.call(this, this.id);
+    }
+
+    JoinCommand.prototype.apply = function(state) {
+      return state.addObject(this.player.id, this.player);
+    };
+
+    return JoinCommand;
+
+  })();
+
+  exports.Command = Command;
+
+  exports.MouseCommand = MouseCommand;
+
+  exports.JoinCommand = JoinCommand;
+
+  exports.ExplodeCommand = ExplodeCommand;
+
 }).call(this);
 
 });
 
+require.define("/turns.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var Game, Player, Serializable, Turn, UUID;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Serializable = require('./serializable.coffee').Serializable;
+
+  UUID = require('./lib/uuid.js');
+
+  exports.Player = Player = (function() {
+
+    __extends(Player, Serializable);
+
+    Player.prototype.__type = 'Player';
+
+    function Player(id, color) {
+      this.id = id != null ? id : null;
+      this.color = color != null ? color : "white";
+      if (!(this.id != null)) this.id = UUID.generate();
+      Player.__super__.constructor.apply(this, arguments);
+    }
+
+    return Player;
+
+  })();
+
+  exports.Game = Game = (function() {
+
+    __extends(Game, Serializable);
+
+    Game.prototype.__type = 'Game';
+
+    function Game(id, players, order, turns) {
+      var player, _ref;
+      this.id = id != null ? id : null;
+      this.players = players != null ? players : {};
+      this.order = order != null ? order : [];
+      this.turns = turns != null ? turns : [];
+      if (!(this.id != null)) this.id = UUID.generate();
+      _ref = this.players;
+      for (id in _ref) {
+        player = _ref[id];
+        this.renderPlayerTile(player, false, false);
+      }
+      this.current_player_id = null;
+      this.turn_id = null;
+      this.turn_idx = null;
+      this.nextTurn();
+      Game.__super__.constructor.apply(this, arguments);
+    }
+
+    Game.prototype.addPlayer = function(player) {
+      this.players[player.id] = player;
+      this.order.push(player.id);
+      return this.renderPlayerTile(player, false, false);
+    };
+
+    Game.prototype.renderPlayerTile = function(player, active, update) {
+      var html;
+      if (active == null) active = false;
+      if (update == null) update = true;
+      html = new EJS({
+        element: 'player_template'
+      }).render({
+        active: active ? 'active' : '',
+        id: player.id,
+        name: player.color,
+        score: 0
+      });
+      if (update) {
+        return $('#' + player.id).replaceWith(html);
+      } else {
+        return $('#player_tiles').append($(html));
+      }
+    };
+
+    Game.prototype.currentPlayer = function() {
+      return this.players[this.order[this.current_player_id]];
+    };
+
+    Game.prototype.recordTurn = function(commands) {
+      var turn;
+      turn = new Turn(this.turn_id, this.currentPlayer().id, commands);
+      this.turns.push(turn);
+      this.turn_idx = this.turns.length - 1;
+      this.renderPlayerTile(this.currentPlayer(), true, true);
+      if (this.turns.length > 1) {
+        this.renderTurnTile(this.turns[this.turns.length - 2], this.turns.length - 2, false, true);
+      }
+      return this.renderTurnTile(turn, this.turn_idx, true, false);
+    };
+
+    Game.prototype.latestTurnNumber = function() {
+      return this.turns.length - 1;
+    };
+
+    Game.prototype.isLatestTurn = function() {
+      return this.turn_idx === this.turns.length - 1;
+    };
+
+    Game.prototype.setTurn = function(turn_num) {
+      if (turn_num < 0 || turn_num >= this.turns.length) return;
+      this.renderTurnTile(this.turns[this.turn_idx], this.turn_idx, false, true);
+      this.turn_idx = turn_num;
+      return this.renderTurnTile(this.turns[this.turn_idx], this.turn_idx, true, true);
+    };
+
+    Game.prototype.renderTurnTile = function(turn, number, active, update) {
+      var html;
+      if (active == null) active = false;
+      if (update == null) update = true;
+      html = new EJS({
+        element: 'turn_template'
+      }).render({
+        active: active ? 'active' : '',
+        id: turn.id,
+        player_name: this.players[turn.player_id].color,
+        turn_time: turn.time.toISOString(),
+        turn_number: number
+      });
+      if (update) {
+        $('#' + turn.id).replaceWith(html);
+      } else {
+        $('#turn_tiles').append($(html));
+      }
+      return $('#' + turn.id).click(function() {
+        return window.turnClicked(number);
+      });
+    };
+
+    Game.prototype.nextTurn = function() {
+      if (this.current_player_id === null) {
+        this.current_player_id = 0;
+        this.turn_idx = 0;
+      } else if (this.current_player_id >= this.order.length - 1) {
+        this.renderPlayerTile(this.currentPlayer(), false, true);
+        this.current_player_id = 0;
+      } else {
+        this.renderPlayerTile(this.currentPlayer(), false, true);
+        this.current_player_id++;
+      }
+      this.renderPlayerTile(this.currentPlayer(), true, true);
+      return this.turn_id = UUID.generate();
+    };
+
+    Game.prototype.computeCommands = function() {
+      var command_idx, commands, turn_i, _ref, _ref2;
+      commands = [];
+      for (turn_i = 0, _ref = this.turn_idx; 0 <= _ref ? turn_i <= _ref : turn_i >= _ref; 0 <= _ref ? turn_i++ : turn_i--) {
+        for (command_idx = 0, _ref2 = this.turns[turn_i].commands.length; 0 <= _ref2 ? command_idx <= _ref2 : command_idx >= _ref2; 0 <= _ref2 ? command_idx++ : command_idx--) {
+          while (command_idx >= commands.length) {
+            commands.push([]);
+          }
+          commands[command_idx] = commands[command_idx].concat(this.turns[turn_i].commands[command_idx] || []);
+        }
+      }
+      return commands;
+    };
+
+    return Game;
+
+  })();
+
+  exports.Turn = Turn = (function() {
+
+    __extends(Turn, Serializable);
+
+    function Turn(id, player_id, commands, time) {
+      this.id = id != null ? id : null;
+      this.player_id = player_id;
+      this.commands = commands;
+      this.time = time != null ? time : null;
+      if (!(this.time != null)) this.time = new Date();
+      if (!(this.id != null)) this.id = UUID.generate();
+      Turn.__super__.constructor.apply(this, arguments);
+    }
+
+    return Turn;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/lib/uuid.js", function (require, module, exports, __dirname, __filename) {
+    /*
+ The MIT License: Copyright (c) 2010 LiosK.
+*/
+function UUID(){}UUID.generate=function(){var a=UUID._getRandomInt,b=UUID._hexAligner;return b(a(32),8)+"-"+b(a(16),4)+"-"+b(16384|a(12),4)+"-"+b(32768|a(14),4)+"-"+b(a(48),12)};UUID._getRandomInt=function(a){if(a<0)return NaN;if(a<=30)return 0|Math.random()*(1<<a);if(a<=53)return(0|Math.random()*1073741824)+(0|Math.random()*(1<<a-30))*1073741824;return NaN};UUID._getIntAligner=function(a){return function(b,f){for(var c=b.toString(a),d=f-c.length,e="0";d>0;d>>>=1,e+=e)if(d&1)c=e+c;return c}};
+UUID._hexAligner=UUID._getIntAligner(16);
+
+exports.generate = UUID.generate
+});
+
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var Timeboats, timestamp;
+  var Timeboats, Turns, timestamp;
 
   Timeboats = require('./timeboats.coffee').Timeboats;
+
+  Turns = require('./turns.coffee');
 
   timestamp = function() {
     return +new Date();
   };
 
   window.onload = function() {
-    var canvas, context, dt, frame, frame_num, game, gdt, last, rdt;
+    var canvas, context, dt, frame, frame_num, game, gdt, last, order, player1, player2, players, rdt, timeboats;
     canvas = $('#game-canvas')[0];
     context = canvas.getContext('2d');
-    game = new Timeboats(context, canvas.width, canvas.height);
+    player1 = new Turns.Player(1, "white");
+    player2 = new Turns.Player(2, "red");
+    players = {
+      1: player1,
+      2: player2
+    };
+    order = [1, 2];
+    game = new Turns.Game(1, players, order);
+    timeboats = new Timeboats(game, context, canvas.width, canvas.height);
     $("#addbutton").prop("disabled", true);
     $("#addbutton").click(function() {
-      return game.addClick();
+      return timeboats.addClick();
     });
     $("#playbutton").click(function() {
-      return game.playClick();
+      return timeboats.playClick();
     });
     $("#timeslider").change(function() {
-      return game.sliderDrag($("#timeslider").val());
+      return timeboats.sliderDrag($("#timeslider").val());
     });
+    window.turnClicked = function(number) {
+      return timeboats.turnClicked(number);
+    };
     canvas.onmousedown = function(e) {
-      return game.onMouseDown(e);
+      return timeboats.onMouseDown(e);
     };
     canvas.onmousemove = function(e) {
       var canoffset, x, y;
       canoffset = $(canvas).offset();
       x = event.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - Math.floor(canoffset.left);
       y = event.clientY + document.body.scrollTop + document.documentElement.scrollTop - Math.floor(canoffset.top) + 1;
-      return game.onMouseMove([x, y]);
+      return timeboats.onMouseMove([x, y]);
     };
     last = timestamp();
     dt = 0;
@@ -1515,14 +1769,14 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       now = timestamp();
       dt = Math.min(1, (now - last) / 1000);
       gdt = gdt + dt;
-      while (gdt > game.timestep) {
-        gdt = gdt - game.timestep;
-        game.update(game.timestep);
+      while (gdt > timeboats.timestep) {
+        gdt = gdt - timeboats.timestep;
+        timeboats.update(timeboats.timestep);
       }
       rdt = rdt + dt;
-      if (rdt > game.renderstep) {
-        rdt = rdt - game.renderstep;
-        game.draw();
+      if (rdt > timeboats.renderstep) {
+        rdt = rdt - timeboats.renderstep;
+        timeboats.draw();
         context.fillText("" + Math.floor(1 / dt), 10, 10);
       }
       last = now;

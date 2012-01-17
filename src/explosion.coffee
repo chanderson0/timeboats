@@ -29,6 +29,7 @@ exports.Explosion = class Explosion extends GameObject
   draw: (context) ->
     context.save()
     context.translate @x, @y
+    context.strokeStyle = "white"
     context.beginPath()
     context.arc 0, 0, @radius, 0, Math.PI*2, true
     context.closePath()

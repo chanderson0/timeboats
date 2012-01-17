@@ -6,7 +6,7 @@ Map = require('./map.coffee').Map
 exports.Square = class Square extends GameObject2D
   __type: 'Square'
 
-  constructor: (@id, @x, @y, @size) ->
+  constructor: (@id, @x, @y, @size, @fill = "white") ->
     super @id, @x, @y
 
     @destx = @x
@@ -14,7 +14,7 @@ exports.Square = class Square extends GameObject2D
     @radius = @size / 2
 
   clone: ->
-    sq = new Square @id, @x, @y, @size
+    sq = new Square @id, @x, @y, @size, @fill
     sq.rotation = @rotation
     sq.vx = @vx
     sq.vy = @vy
@@ -43,8 +43,12 @@ exports.Square = class Square extends GameObject2D
 
     super dt, state
 
-  draw: (context) ->
+  draw: (context, options) ->
     context.save()
+    if options? and options.dim
+      context.globalAlpha = 0.5
+      
+    context.fillStyle = @fill
     context.translate @x, @y
     context.rotate @rotation
     context.fillRect -@size/2, -@size/2, @size, @size

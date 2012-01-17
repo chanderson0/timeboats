@@ -1,0 +1,66 @@
+#game {
+  float: left;
+  width: 576px;
+  margin: 20px;
+}
+
+#playbutton {
+  width: 50px;
+}
+
+#timeslider {
+  width: 500px;
+  float: right;
+}
+
+#players {
+  float: left;
+  width: 200px;
+  margin: 20px 10px;
+}
+
+#player_tiles .player {
+  height: 40px;
+  width: 100%;
+  margin: 3px;
+  background: #eee;
+  padding: 5px;
+  line-height: 40px;
+  vertical-align: center;
+}
+
+#player_tiles .active {
+  background: #FFFDBF;
+}
+
+.player_name {
+  font-weight: bold;
+}
+
+.player_score {
+  float: right;
+}
+
+#turn_tiles .turn {
+  cursor: pointer;
+  height: 20px;
+  width: 100%;
+  margin: 3px;
+  background: #eee;
+  padding: 5px;
+  line-height: 20px;
+  font-size: 70%;
+  vertical-align: center;
+}
+
+#turn_tiles .turn:hover {
+  background: #fff;
+}
+
+#turn_tiles .active {
+  background: #FFFDBF;
+}
+
+.turn_time {
+  font-style: italic;
+}
