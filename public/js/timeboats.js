@@ -1142,10 +1142,12 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
         collided = false;
         _results = [];
         for (x = xStart; xStart <= xFinish ? x <= xFinish : x >= xFinish; xStart <= xFinish ? x++ : x--) {
+          if (x < 0 || x >= this.width) continue;
           _results.push((function() {
             var _results2;
             _results2 = [];
             for (y = yStart; yStart <= yFinish ? y <= yFinish : y >= yFinish; yStart <= yFinish ? y++ : y--) {
+              if (y < 0 || y >= this.height) continue;
               if (disturb) this.cells[x][y].excitement = 0.7;
               if (this.cells[x][y].altitude >= this.waterLevel) {
                 if (!collided) {
