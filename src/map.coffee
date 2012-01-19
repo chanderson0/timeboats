@@ -8,7 +8,7 @@ exports.Map = class Map extends GameObject
   __type: 'Map'
   instance = null
 
-  @CELL_SIZE_PX: 16
+  @CELL_SIZE_PX: 12
 
   #singleton instantiator
   @getInstance: ->
@@ -42,26 +42,31 @@ exports.Map = class Map extends GameObject
 
   draw: (context) ->
     if @isInitialized
+      context.save()
       for x in [0..@width - 1]
         for y in [0..@height - 1]
-          context.save()
-          context.translate x * Map.CELL_SIZE_PX, y * Map.CELL_SIZE_PX
+          cellX = x * Map.CELL_SIZE_PX
+          cellY = y * Map.CELL_SIZE_PX
 
-          bVal = Math.floor(40 + @cells[x][y].altitude * 10)
-          rgVal = Math.floor(bVal * 0.9)
-          context.fillStyle = "rgba(#{rgVal}, #{rgVal}, #{bVal}, 1)"
-          context.fillRect 0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
-
-          if @cells[x][y].isPlant
-            context.fillStyle="rgba(72, 105, 87, 0.8)"
-            context.fillRect 0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
-
+          b = Math.floor(40 + @cells[x][y].altitude * 10)
+          r = Math.floor(b * 0.9)
+          g = r
           if @cells[x][y].altitude < @waterLevel
             alpha = 0.5 + @cells[x][y].excitement * 0.2
-            context.fillStyle = "rgba(60, 110, 150, #{alpha})"
-            context.fillRect(0, 0, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX)
+            landAlpha = 1 / (1 + alpha)
+            waterAlpha = alpha / (1 + alpha)
+            r = Math.floor(r * landAlpha + 60.0 * waterAlpha)
+            g = Math.floor(g * landAlpha + 110.0 * waterAlpha)
+            b = Math.floor(b * landAlpha + 150.0 * waterAlpha)
 
-          context.restore()
+          if @cells[x][y].isPlant
+            r = Math.floor(r * 0.2 + 72 * 0.8)
+            g = Math.floor(g * 0.2 + 105 * 0.8)
+            b = Math.floor(b * 0.2 + 87 * 0.8)
+
+          context.fillStyle = "rgba(#{r}, #{g}, #{b}, 1)"
+          context.fillRect cellX, cellY, cellX + Map.CELL_SIZE_PX, cellY + Map.CELL_SIZE_PX
+      context.restore()
 
   # collision methods
   # collideWith(obj) expects a GameObject2D instance.
@@ -129,19 +134,19 @@ exports.Map = class Map extends GameObject
 
     # raise the terrain by swiping gaussians across it
 
-    # first some big wide ones
-    @.swipeGaussian(12, 14, 15)
-    @.swipeGaussian(12, 14, 15)
+    # first some big wide ones (12, 14, 15)
+    @.swipeGaussian(18, 20, 30)
+    @.swipeGaussian(18, 20, 30)
 
-    # now some medium ones
+    # now some medium ones (6, 8, 4 + 10)
     numGaussians = 1 + @random.next() % 3
     for i in [1..numGaussians]
-      @.swipeGaussian(6, 8, 4 + @random.next() % 10)
+      @.swipeGaussian(12, 14, 6 + @random.next() % 15)
 
-    # finally some narrow tall ones
+    # finally some narrow tall ones (3, 6, 6)
     numGaussians = 1 + @random.next() % 4
     for i in [1..numGaussians]
-      @.swipeGaussian(3, 6, 6)
+      @.swipeGaussian(7, 10, 10)
 
     # now discretize our altitudes
     # and also make some cells trees.
