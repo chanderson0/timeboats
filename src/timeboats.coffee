@@ -13,12 +13,12 @@ exports.Timeboats = class Timeboats
 
     @frame_history = [new State()]
     @command_history = []
-    @frame_num = 0
+    @setFrameNum(0)
 
     @active_commands = []
 
-    Map.getInstance().generate @width / Map.CELL_SIZE_PX, 
-      @height / Map.CELL_SIZE_PX, 
+    Map.getInstance().generate @width / Map.CELL_SIZE_PX,
+      @height / Map.CELL_SIZE_PX,
       new Date().getTime()
 
   playClick: ->
@@ -61,8 +61,7 @@ exports.Timeboats = class Timeboats
     else if oldState == "rerecording" and newState == "paused"
       @gamestate = "paused"
 
-      @frame_num = 0
-      @updateSlider(@frame_num)
+      @setFrameNum(0)
 
       $("#playbutton").html "Play"
       $("#playbutton").prop "disabled", false
@@ -73,9 +72,8 @@ exports.Timeboats = class Timeboats
       @active_commands = []
       @game.nextTurn()
 
-      @frame_num = 0
+      @setFrameNum(0)
       @gamestate = "paused"
-      @updateSlider(@frame_num)
 
       $("#playbutton").html "Play"
       $("#playbutton").prop "disabled", false
@@ -88,16 +86,15 @@ exports.Timeboats = class Timeboats
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", true
     else if oldState == "paused" and newState == "ready"
+      @setFrameNum(0)
+
       if not @game.isLatestTurn()
         @game.setTurn @game.latestTurnNumber()
         @command_history = @game.computeCommands()
 
-        @frame_num = 0   
         @frame_history = [@frame_history[@frame_num]]
 
       @gamestate = "ready"
-      @frame_num = 0
-      @updateSlider(@frame_num)
 
       $("#playbutton").html "Start"
       $("#addbutton").html "Ready Next"
@@ -111,6 +108,13 @@ exports.Timeboats = class Timeboats
     else
       console.log "couldn't switch state"
 
+  setFrameNum: (value, updateSlider = true) ->
+    @frame_num = value
+    Map.getInstance().setFrame(value)
+    Map.getInstance().computeTerrainState()
+    if updateSlider
+      @updateSlider(value)
+
   updateSlider: (value, max = -1) ->
     $("#timeslider").prop 'value', value
 
@@ -118,19 +122,18 @@ exports.Timeboats = class Timeboats
       $("#timeslider").prop 'max', max
 
   turnClicked: (number) ->
-    if @gamestate == "paused" 
+    if @gamestate == "paused"
       @game.setTurn(number)
       @command_history = @game.computeCommands()
 
-      @frame_num = 0   
+      @setFrameNum(0)
       @frame_history = [@frame_history[@frame_num]]
-      @updateSlider(@frame_num)
 
       @updateState "paused", "rerecording"
 
   sliderDrag: (value) ->
     if @gamestate == "paused"
-      @frame_num = value
+      @setFrameNum(value, false)
     else
       @updateState @gamestate, "paused"
 
@@ -143,11 +146,14 @@ exports.Timeboats = class Timeboats
     Map.getInstance().update dt
 
     if @gamestate == "recording" || @gamestate == "rerecording"
+      # console.log "recording", @frame_num
+      Map.getInstance().setFrame(@frame_num + 1, true)
+
       next_state = @frame_history[@frame_num].clone()
       next_state.setCommands (@command_history[@frame_num] || [])
       next_state.update dt
 
-      @frame_num++
+      @setFrameNum(@frame_num + 1)
       if @frame_history.length > @frame_num
         @frame_history[@frame_num] = next_state
       else
@@ -163,19 +169,17 @@ exports.Timeboats = class Timeboats
             player_count++
 
         if player_count == 0
-          @frame_history.splice @frame_num + 1, 
+          @frame_history.splice @frame_num + 1,
             @frame_history.length - @frame_num
           @updateSlider(@frame_num, @frame_num)
           @updateState @gamestate, "paused"
 
     else if @gamestate == "playing"
-      @frame_num++
-      @updateSlider(@frame_num)
+      @setFrameNum(@frame_num + 1)
 
       if @frame_num >= @frame_history.length
         @updateState "playing", "paused"
-        @frame_num = 0
-        @updateSlider(@frame_num)
+        @setFrameNum(0)
 
     else if @gamestate == "paused"
       @state = @frame_history[@frame_num]

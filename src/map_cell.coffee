@@ -6,9 +6,18 @@ exports.MapCell = class MapCell extends GameObject
   constructor: (@altitude) ->
     @isPlant = false
     @excitement = 0
+    @.saveInitialState()
     super
 
   clone: ->
     new MapCell(@altitude)
+
+  saveInitialState: ->
+    @initial_altitude = @altitude
+    @initial_isPlant = @isPlant
+
+  reset: ->
+    @altitude = @initial_altitude
+    @isPlant = @initial_isPlant
 
   update: (dt) ->
