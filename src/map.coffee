@@ -25,6 +25,8 @@ exports.Map = class Map extends GameObject
     @random = null
     @waterLevel = 5
     @waterDt = 0
+    @frame_num = 0
+    @damages = []
     super
 
   clone: -> instance
@@ -92,8 +94,36 @@ exports.Map = class Map extends GameObject
                 x = xFinish + 1
                 y = yFinish + 1
 
+
   # damage the terrain at (x, y) in a circle with radius (radius) pixels.
   damageAt: (x, y, radius) ->
+    if @damages["f#{@frame_num}"]?
+      @damages["f#{@frame_num}"].push [x, y, radius]
+    else
+      @damages["f#{@frame_num}"] = [[x, y, radius]]
+
+  # update the map's current frame. this should be synched with the main game's frame.
+  setFrame: (num, overwrite = false) ->
+    @frame_num = num
+    if overwrite
+      @damages["f#{@frame_num}"] = []
+
+  # after setting the map's current frame, this will update the terrain to reflect that frame.
+  computeTerrainState: ->
+    if @isInitialized
+      @.resetTerrain()
+      for i in [0..@frame_num]
+        if @damages["f#{i}"]?
+          @.applyDamageGaussian(d[0], d[1], d[2]) for d in @damages["f#{i}"]
+
+  # reset the map terrain to the way it was at the beginning of time. (PANGEA?!)
+  resetTerrain: ->
+    if @isInitialized
+      for x in [0..@width - 1]
+        for y in [0..@height - 1]
+          @cells[x][y].reset()
+
+  applyDamageGaussian: (x, y, radius) ->
     if @isInitialized
       radius = Math.ceil(radius / Map.CELL_SIZE_PX)
       x = @.getCellAt(x)
@@ -155,6 +185,7 @@ exports.Map = class Map extends GameObject
         if @cells[x][y].altitude > @waterLevel + 1 and (@cells[x][y].altitude - @waterLevel - 1) * 0.03 > @random.nextf()
           @cells[x][y].isPlant = true
         @cells[x][y].altitude = Math.floor(@cells[x][y].altitude)
+        @cells[x][y].saveInitialState()
 
     @isInitialized = true
 

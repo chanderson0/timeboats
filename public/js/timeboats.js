@@ -369,7 +369,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.gamestate = "init";
       this.frame_history = [new State()];
       this.command_history = [];
-      this.frame_num = 0;
+      this.setFrameNum(0);
       this.active_commands = [];
       Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, new Date().getTime());
     }
@@ -411,8 +411,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         return $("#addbutton").prop("disabled", true);
       } else if (oldState === "rerecording" && newState === "paused") {
         this.gamestate = "paused";
-        this.frame_num = 0;
-        this.updateSlider(this.frame_num);
+        this.setFrameNum(0);
         $("#playbutton").html("Play");
         $("#playbutton").prop("disabled", false);
         $("#addbutton").html("Ready Next");
@@ -421,9 +420,8 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.game.recordTurn(this.active_commands);
         this.active_commands = [];
         this.game.nextTurn();
-        this.frame_num = 0;
+        this.setFrameNum(0);
         this.gamestate = "paused";
-        this.updateSlider(this.frame_num);
         $("#playbutton").html("Play");
         $("#playbutton").prop("disabled", false);
         $("#addbutton").html("Ready Next");
@@ -434,15 +432,13 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         $("#addbutton").html("Ready Next");
         return $("#addbutton").prop("disabled", true);
       } else if (oldState === "paused" && newState === "ready") {
+        this.setFrameNum(0);
         if (!this.game.isLatestTurn()) {
           this.game.setTurn(this.game.latestTurnNumber());
           this.command_history = this.game.computeCommands();
-          this.frame_num = 0;
           this.frame_history = [this.frame_history[this.frame_num]];
         }
         this.gamestate = "ready";
-        this.frame_num = 0;
-        this.updateSlider(this.frame_num);
         $("#playbutton").html("Start");
         $("#addbutton").html("Ready Next");
         return $("#addbutton").prop("disabled", true);
@@ -456,6 +452,14 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       }
     };
 
+    Timeboats.prototype.setFrameNum = function(value, updateSlider) {
+      if (updateSlider == null) updateSlider = true;
+      this.frame_num = value;
+      Map.getInstance().setFrame(value);
+      Map.getInstance().computeTerrainState();
+      if (updateSlider) return this.updateSlider(value);
+    };
+
     Timeboats.prototype.updateSlider = function(value, max) {
       if (max == null) max = -1;
       $("#timeslider").prop('value', value);
@@ -466,16 +470,15 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       if (this.gamestate === "paused") {
         this.game.setTurn(number);
         this.command_history = this.game.computeCommands();
-        this.frame_num = 0;
+        this.setFrameNum(0);
         this.frame_history = [this.frame_history[this.frame_num]];
-        this.updateSlider(this.frame_num);
         return this.updateState("paused", "rerecording");
       }
     };
 
     Timeboats.prototype.sliderDrag = function(value) {
       if (this.gamestate === "paused") {
-        return this.frame_num = value;
+        return this.setFrameNum(value, false);
       } else {
         return this.updateState(this.gamestate, "paused");
       }
@@ -492,10 +495,11 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       var id, next_state, object, player_count, _ref;
       Map.getInstance().update(dt);
       if (this.gamestate === "recording" || this.gamestate === "rerecording") {
+        Map.getInstance().setFrame(this.frame_num + 1, true);
         next_state = this.frame_history[this.frame_num].clone();
         next_state.setCommands(this.command_history[this.frame_num] || []);
         next_state.update(dt);
-        this.frame_num++;
+        this.setFrameNum(this.frame_num + 1);
         if (this.frame_history.length > this.frame_num) {
           this.frame_history[this.frame_num] = next_state;
         } else {
@@ -518,12 +522,10 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
           }
         }
       } else if (this.gamestate === "playing") {
-        this.frame_num++;
-        this.updateSlider(this.frame_num);
+        this.setFrameNum(this.frame_num + 1);
         if (this.frame_num >= this.frame_history.length) {
           this.updateState("playing", "paused");
-          this.frame_num = 0;
-          return this.updateSlider(this.frame_num);
+          return this.setFrameNum(0);
         }
       } else if (this.gamestate === "paused") {
         return this.state = this.frame_history[this.frame_num];
@@ -1061,6 +1063,8 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       this.random = null;
       this.waterLevel = 5;
       this.waterDt = 0;
+      this.frame_num = 0;
+      this.damages = [];
       Map.__super__.constructor.apply(this, arguments);
     }
 
@@ -1168,6 +1172,63 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.damageAt = function(x, y, radius) {
+      if (this.damages["f" + this.frame_num] != null) {
+        return this.damages["f" + this.frame_num].push([x, y, radius]);
+      } else {
+        return this.damages["f" + this.frame_num] = [[x, y, radius]];
+      }
+    };
+
+    Map.prototype.setFrame = function(num, overwrite) {
+      if (overwrite == null) overwrite = false;
+      this.frame_num = num;
+      if (overwrite) return this.damages["f" + this.frame_num] = [];
+    };
+
+    Map.prototype.computeTerrainState = function() {
+      var d, i, _ref, _results;
+      if (this.isInitialized) {
+        this.resetTerrain();
+        _results = [];
+        for (i = 0, _ref = this.frame_num; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+          if (this.damages["f" + i] != null) {
+            _results.push((function() {
+              var _i, _len, _ref2, _results2;
+              _ref2 = this.damages["f" + i];
+              _results2 = [];
+              for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+                d = _ref2[_i];
+                _results2.push(this.applyDamageGaussian(d[0], d[1], d[2]));
+              }
+              return _results2;
+            }).call(this));
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      }
+    };
+
+    Map.prototype.resetTerrain = function() {
+      var x, y, _ref, _results;
+      if (this.isInitialized) {
+        _results = [];
+        for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
+          _results.push((function() {
+            var _ref2, _results2;
+            _results2 = [];
+            for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
+              _results2.push(this.cells[x][y].reset());
+            }
+            return _results2;
+          }).call(this));
+        }
+        return _results;
+      }
+    };
+
+    Map.prototype.applyDamageGaussian = function(x, y, radius) {
       var g, xG, yG, _ref, _ref2, _results;
       if (this.isInitialized) {
         radius = Math.ceil(radius / Map.CELL_SIZE_PX);
@@ -1235,6 +1296,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
             this.cells[x][y].isPlant = true;
           }
           this.cells[x][y].altitude = Math.floor(this.cells[x][y].altitude);
+          this.cells[x][y].saveInitialState();
         }
       }
       return this.isInitialized = true;
@@ -1307,11 +1369,22 @@ require.define("/map_cell.coffee", function (require, module, exports, __dirname
       this.altitude = altitude;
       this.isPlant = false;
       this.excitement = 0;
+      this.saveInitialState();
       MapCell.__super__.constructor.apply(this, arguments);
     }
 
     MapCell.prototype.clone = function() {
       return new MapCell(this.altitude);
+    };
+
+    MapCell.prototype.saveInitialState = function() {
+      this.initial_altitude = this.altitude;
+      return this.initial_isPlant = this.isPlant;
+    };
+
+    MapCell.prototype.reset = function() {
+      this.altitude = this.initial_altitude;
+      return this.isPlant = this.initial_isPlant;
     };
 
     MapCell.prototype.update = function(dt) {};
