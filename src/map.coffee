@@ -83,7 +83,11 @@ exports.Map = class Map extends GameObject
 
       collided = false
       for x in [xStart..xFinish]
+        if x < 0 or x >= @width
+          continue
         for y in [yStart..yFinish]
+          if y < 0 or y >= @height
+            continue
           if disturb
             @cells[x][y].excitement = 0.7
           if @cells[x][y].altitude >= @waterLevel # collision with terrain
