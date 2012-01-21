@@ -488,7 +488,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.sliderDrag = function(value) {
-      if (this.gamestate === "paused") return this.setFrameNum(value, false);
+      if (this.gamestate === "paused") {
+        return this.setFrameNum(parseInt(value), false);
+      }
     };
 
     Timeboats.prototype.addCommand = function(buffer, command) {

@@ -147,7 +147,7 @@ exports.Timeboats = class Timeboats
 
   sliderDrag: (value) ->
     if @gamestate == "paused"
-      @setFrameNum(value, false)
+      @setFrameNum(parseInt(value), false)
 
   addCommand: (buffer, command) ->
     while @frame_num >= buffer.length
