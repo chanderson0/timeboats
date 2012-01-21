@@ -357,11 +357,12 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 
   exports.Timeboats = Timeboats = (function() {
 
-    function Timeboats(game, context, width, height) {
+    function Timeboats(game, context, width, height, api) {
       this.game = game;
       this.context = context;
       this.width = width;
       this.height = height;
+      this.api = api != null ? api : null;
       this.onMouseMove = __bind(this.onMouseMove, this);
       this.onMouseDown = __bind(this.onMouseDown, this);
       this.timestep = 1 / 60;
@@ -371,7 +372,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.command_history = [];
       this.setFrameNum(0);
       this.active_commands = [];
-      Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, new Date().getTime());
+      if (!(this.game.mapSeed != null)) this.game.setMap(new Date().getTime());
+      Map.getInstance().generate(width / Map.CELL_SIZE_PX, height / Map.CELL_SIZE_PX, this.game.mapSeed);
+      this.game.render();
     }
 
     Timeboats.prototype.playClick = function() {
@@ -394,7 +397,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       var command, player;
       console.log(oldState, '->', newState);
       if ((oldState === "init" || oldState === "ready") && newState === "recording") {
-        player = new Square(this.game.turn_id, 100, 100, 20, this.game.currentPlayer().color);
+        player = new Square(this.game.next_turn_id, 100, 100, 20, this.game.currentPlayer().color);
         command = new Command.JoinCommand(player.id, player);
         this.addCommand(this.command_history, command);
         this.addCommand(this.active_commands, command);
@@ -403,7 +406,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         $("#playbutton").prop("disabled", true);
         $("#addbutton").html("Ready Next");
         return $("#addbutton").prop("disabled", true);
-      } else if (oldState === "paused" && newState === "rerecording") {
+      } else if ((oldState === "init" || oldState === "paused") && newState === "rerecording") {
         this.gamestate = "rerecording";
         $("#playbutton").html("Stop");
         $("#playbutton").prop("disabled", true);
@@ -412,8 +415,10 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       } else if (oldState === "rerecording" && newState === "paused") {
         this.gamestate = "paused";
         this.setFrameNum(0);
-        $("#playbutton").html("Play");
-        $("#playbutton").prop("disabled", false);
+        if (this.game.turns.length > 0) {
+          $("#playbutton").html("Play");
+          $("#playbutton").prop("disabled", false);
+        }
         $("#addbutton").html("Ready Next");
         return $("#addbutton").prop("disabled", false);
       } else if (oldState === "recording" && newState === "paused") {
@@ -421,14 +426,18 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.active_commands = [];
         this.game.nextTurn();
         this.setFrameNum(0);
+        if (this.api != null) this.api.saveGame(this.game);
         this.gamestate = "paused";
-        $("#playbutton").html("Play");
-        $("#playbutton").prop("disabled", false);
+        if (this.game.turns.length > 0) {
+          $("#playbutton").html("Play");
+          $("#playbutton").prop("disabled", false);
+        }
         $("#addbutton").html("Ready Next");
         return $("#addbutton").prop("disabled", false);
       } else if (oldState === "paused" && newState === "playing") {
         this.gamestate = "playing";
         $("#playbutton").html("Pause");
+        $("#playbutton").prop("disabled", false);
         $("#addbutton").html("Ready Next");
         return $("#addbutton").prop("disabled", true);
       } else if (oldState === "paused" && newState === "ready") {
@@ -440,6 +449,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         }
         this.gamestate = "ready";
         $("#playbutton").html("Start");
+        $("#playbutton").prop("disabled", false);
         $("#addbutton").html("Ready Next");
         return $("#addbutton").prop("disabled", true);
       } else if ((oldState === "playing" || oldState === "ready") && newState === "paused") {
@@ -467,7 +477,8 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.turnClicked = function(number) {
-      if (this.gamestate === "paused") {
+      if (this.gamestate === "paused" || this.gamestate === "init") {
+        if (number === null) number = this.game.latestTurnNumber();
         this.game.setTurn(number);
         this.command_history = this.game.computeCommands();
         this.setFrameNum(0);
@@ -477,11 +488,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.sliderDrag = function(value) {
-      if (this.gamestate === "paused") {
-        return this.setFrameNum(value, false);
-      } else {
-        return this.updateState(this.gamestate, "paused");
-      }
+      if (this.gamestate === "paused") return this.setFrameNum(value, false);
     };
 
     Timeboats.prototype.addCommand = function(buffer, command) {
@@ -536,14 +543,14 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.context.clearRect(0, 0, this.width + 1, this.height + 1);
       Map.getInstance().draw(this.context);
       return this.frame_history[this.frame_num].draw(this.context, {
-        active: this.game.turn_id
+        active: this.game.next_turn_id
       });
     };
 
     Timeboats.prototype.onMouseDown = function(e) {
       var command;
       if (this.gamestate === "recording") {
-        command = new Command.ExplodeCommand(this.game.turn_id);
+        command = new Command.ExplodeCommand(this.game.next_turn_id);
         this.addCommand(this.command_history, command);
         return this.addCommand(this.active_commands, command);
       }
@@ -552,7 +559,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     Timeboats.prototype.onMouseMove = function(e) {
       var command;
       if (this.gamestate === "recording") {
-        command = new Command.MouseCommand(this.game.turn_id, e[0], e[1]);
+        command = new Command.MouseCommand(this.game.next_turn_id, e[0], e[1]);
         this.addCommand(this.command_history, command);
         return this.addCommand(this.active_commands, command);
       }
@@ -667,6 +674,23 @@ require.define("/serializable.coffee", function (require, module, exports, __dir
       this.__type = this.__type;
     }
 
+    Serializable.prototype.afterDeserialize = function() {};
+
+    Serializable.prototype.eachKey = function(key, value) {
+      return;
+    };
+
+    Serializable.buildClassMap = function() {
+      var object, objects, res, _i, _len;
+      objects = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+      res = {};
+      for (_i = 0, _len = objects.length; _i < _len; _i++) {
+        object = objects[_i];
+        res[object.prototype.__type] = object;
+      }
+      return res;
+    };
+
     Serializable.buildMap = function() {
       var id, key, map, maps, res, val;
       maps = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
@@ -682,21 +706,22 @@ require.define("/serializable.coffee", function (require, module, exports, __dir
     };
 
     Serializable.deserialize = function(object, prototypes) {
-      var key, value, _results;
+      var key, val, value;
       if ((object != null) && typeof object === 'object') {
         if (object.__type != null) {
           object.__proto__ = prototypes[object.__type].prototype;
         }
-        _results = [];
         for (key in object) {
           value = object[key];
-          if (typeof value === 'object') {
-            _results.push(this.deserialize(value, prototypes));
-          } else {
-            _results.push(void 0);
+          val = void 0;
+          if (object.__type != null) val = object.eachKey(key, value);
+          if (val === void 0 && typeof value === 'object') {
+            this.deserialize(value, prototypes);
+          } else if (val !== void 0) {
+            object[key] = val;
           }
         }
-        return _results;
+        if (object.__type != null) return object.afterDeserialize();
       }
     };
 
@@ -1591,12 +1616,14 @@ require.define("/command.coffee", function (require, module, exports, __dirname,
 
 require.define("/turns.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var Game, Player, Serializable, Turn, UUID;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Game, GameRenderer, Map, Player, Serializable, Turn, UUID;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   Serializable = require('./serializable.coffee').Serializable;
 
   UUID = require('./lib/uuid.js');
+
+  Map = require('./map.coffee').Map;
 
   exports.Player = Player = (function() {
 
@@ -1615,38 +1642,56 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
 
   })();
 
-  exports.Game = Game = (function() {
+  GameRenderer = (function() {
 
-    __extends(Game, Serializable);
+    function GameRenderer() {}
 
-    Game.prototype.__type = 'Game';
-
-    function Game(id, players, order, turns) {
-      var player, _ref;
-      this.id = id != null ? id : null;
-      this.players = players != null ? players : {};
-      this.order = order != null ? order : [];
-      this.turns = turns != null ? turns : [];
-      if (!(this.id != null)) this.id = UUID.generate();
-      _ref = this.players;
-      for (id in _ref) {
-        player = _ref[id];
-        this.renderPlayerTile(player, false, false);
+    GameRenderer.render = function(game) {
+      var active_turn, player, player_idx, turn, turn_idx, _ref, _ref2;
+      $('#turn_tiles').html('');
+      $('#player_tiles').html('');
+      if (game.order.length > 0) {
+        for (player_idx = 0, _ref = game.order.length; 0 <= _ref ? player_idx < _ref : player_idx > _ref; 0 <= _ref ? player_idx++ : player_idx--) {
+          player = game.getPlayerByIndex(player_idx);
+          this.renderPlayerTile(player, false, false);
+        }
+        this.renderPlayerTile(game.currentPlayer(), true, true);
       }
-      this.current_player_id = null;
-      this.turn_id = null;
-      this.turn_idx = null;
-      this.nextTurn();
-      Game.__super__.constructor.apply(this, arguments);
-    }
-
-    Game.prototype.addPlayer = function(player) {
-      this.players[player.id] = player;
-      this.order.push(player.id);
-      return this.renderPlayerTile(player, false, false);
+      if (game.turns.length > 0) {
+        console.log(game.turns);
+        for (turn_idx = 0, _ref2 = game.turns.length; 0 <= _ref2 ? turn_idx < _ref2 : turn_idx > _ref2; 0 <= _ref2 ? turn_idx++ : turn_idx--) {
+          turn = game.getTurnByIndex(turn_idx);
+          this.renderTurnTile(turn, turn_idx, game, false, false);
+        }
+        active_turn = game.getTurnByIndex(game.turn_idx);
+        return this.renderTurnTile(active_turn, game.turn_idx, game, true, true);
+      }
     };
 
-    Game.prototype.renderPlayerTile = function(player, active, update) {
+    GameRenderer.renderTurnTile = function(turn, number, game, active, update) {
+      var html;
+      if (active == null) active = false;
+      if (update == null) update = true;
+      html = new EJS({
+        element: 'turn_template'
+      }).render({
+        active: active ? 'active' : '',
+        id: turn.id,
+        player_name: game.players[turn.player_id].color,
+        turn_time: turn.time.toISOString(),
+        turn_number: number
+      });
+      if (update) {
+        $('#' + turn.id).replaceWith(html);
+      } else {
+        $('#turn_tiles').append($(html));
+      }
+      return $('#' + turn.id).click(function() {
+        return window.turnClicked(number);
+      });
+    };
+
+    GameRenderer.renderPlayerTile = function(player, active, update) {
       var html;
       if (active == null) active = false;
       if (update == null) update = true;
@@ -1665,20 +1710,70 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
       }
     };
 
+    return GameRenderer;
+
+  })();
+
+  exports.Game = Game = (function() {
+
+    __extends(Game, Serializable);
+
+    Game.prototype.__type = 'Game';
+
+    function Game(id, players, order, turns) {
+      this.id = id != null ? id : null;
+      this.players = players != null ? players : {};
+      this.order = order != null ? order : [];
+      this.turns = turns != null ? turns : [];
+      this.render = __bind(this.render, this);
+      if (!(this.id != null)) this.id = UUID.generate();
+      this.next_turn_id = UUID.generate();
+      this.current_player_id = 0;
+      this.turn_idx = 0;
+      console.log('constructor');
+      Game.__super__.constructor.apply(this, arguments);
+    }
+
+    Game.prototype.afterDeserialize = function() {
+      this.next_turn_id = UUID.generate();
+      return console.log('afterDeserialize');
+    };
+
+    Game.prototype.render = function() {
+      return GameRenderer.render(this);
+    };
+
+    Game.prototype.setMap = function(seed) {
+      return this.mapSeed = seed;
+    };
+
+    Game.prototype.addPlayer = function(player) {
+      this.players[player.id] = player;
+      this.order.push(player.id);
+      console.log('addPlayer');
+      return this.render();
+    };
+
+    Game.prototype.getPlayerByIndex = function(idx) {
+      return this.players[this.order[idx]];
+    };
+
     Game.prototype.currentPlayer = function() {
-      return this.players[this.order[this.current_player_id]];
+      return this.getPlayerByIndex(this.current_player_id);
     };
 
     Game.prototype.recordTurn = function(commands) {
       var turn;
       turn = new Turn(this.turn_id, this.currentPlayer().id, commands);
       this.turns.push(turn);
-      this.turn_idx = this.turns.length - 1;
-      this.renderPlayerTile(this.currentPlayer(), true, true);
-      if (this.turns.length > 1) {
-        this.renderTurnTile(this.turns[this.turns.length - 2], this.turns.length - 2, false, true);
-      }
-      return this.renderTurnTile(turn, this.turn_idx, true, false);
+      this.turn_idx = this.latestTurnNumber();
+      console.log('recordTurn');
+      this.render();
+      return turn;
+    };
+
+    Game.prototype.getTurnByIndex = function(idx) {
+      return this.turns[idx];
     };
 
     Game.prototype.latestTurnNumber = function() {
@@ -1691,54 +1786,28 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
 
     Game.prototype.setTurn = function(turn_num) {
       if (turn_num < 0 || turn_num >= this.turns.length) return;
-      this.renderTurnTile(this.turns[this.turn_idx], this.turn_idx, false, true);
       this.turn_idx = turn_num;
-      return this.renderTurnTile(this.turns[this.turn_idx], this.turn_idx, true, true);
-    };
-
-    Game.prototype.renderTurnTile = function(turn, number, active, update) {
-      var html;
-      if (active == null) active = false;
-      if (update == null) update = true;
-      html = new EJS({
-        element: 'turn_template'
-      }).render({
-        active: active ? 'active' : '',
-        id: turn.id,
-        player_name: this.players[turn.player_id].color,
-        turn_time: turn.time.toISOString(),
-        turn_number: number
-      });
-      if (update) {
-        $('#' + turn.id).replaceWith(html);
-      } else {
-        $('#turn_tiles').append($(html));
-      }
-      return $('#' + turn.id).click(function() {
-        return window.turnClicked(number);
-      });
+      console.log('setTurn');
+      return this.render();
     };
 
     Game.prototype.nextTurn = function() {
-      if (this.current_player_id === null) {
-        this.current_player_id = 0;
-        this.turn_idx = 0;
-      } else if (this.current_player_id >= this.order.length - 1) {
-        this.renderPlayerTile(this.currentPlayer(), false, true);
+      if (this.current_player_id >= this.order.length - 1) {
         this.current_player_id = 0;
       } else {
-        this.renderPlayerTile(this.currentPlayer(), false, true);
         this.current_player_id++;
       }
-      this.renderPlayerTile(this.currentPlayer(), true, true);
-      return this.turn_id = UUID.generate();
+      this.next_turn_id = UUID.generate();
+      console.log('nextTurn');
+      return this.render();
     };
 
     Game.prototype.computeCommands = function() {
       var command_idx, commands, turn_i, _ref, _ref2;
+      if (this.turns.length === 0) return [];
       commands = [];
       for (turn_i = 0, _ref = this.turn_idx; 0 <= _ref ? turn_i <= _ref : turn_i >= _ref; 0 <= _ref ? turn_i++ : turn_i--) {
-        for (command_idx = 0, _ref2 = this.turns[turn_i].commands.length; 0 <= _ref2 ? command_idx <= _ref2 : command_idx >= _ref2; 0 <= _ref2 ? command_idx++ : command_idx--) {
+        for (command_idx = 0, _ref2 = this.turns[turn_i].commands.length; 0 <= _ref2 ? command_idx < _ref2 : command_idx > _ref2; 0 <= _ref2 ? command_idx++ : command_idx--) {
           while (command_idx >= commands.length) {
             commands.push([]);
           }
@@ -1756,15 +1825,22 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
 
     __extends(Turn, Serializable);
 
+    Turn.prototype.__type = 'Turn';
+
     function Turn(id, player_id, commands, time) {
       this.id = id != null ? id : null;
       this.player_id = player_id;
       this.commands = commands;
       this.time = time != null ? time : null;
-      if (!(this.time != null)) this.time = new Date();
+      if (this.time === null || !(this.time != null)) this.time = new Date();
       if (!(this.id != null)) this.id = UUID.generate();
       Turn.__super__.constructor.apply(this, arguments);
     }
+
+    Turn.prototype.eachKey = function(key, value) {
+      if (key === 'time') return new Date(value);
+      return;
+    };
 
     return Turn;
 
@@ -1784,49 +1860,231 @@ UUID._hexAligner=UUID._getIntAligner(16);
 exports.generate = UUID.generate
 });
 
+require.define("/api.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var API, Command, Explosion, GameObject, GameObject2D, LocalAPI, Serializable, Square, State, Turns, classmap;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
+
+  Turns = require('./turns.coffee');
+
+  GameObject = require('./game_object.coffee').GameObject;
+
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
+
+  Explosion = require('./explosion.coffee').Explosion;
+
+  State = require('./state.coffee').State;
+
+  Square = require('./square.coffee').Square;
+
+  Command = require('./command.coffee');
+
+  Serializable = require('./serializable.coffee').Serializable;
+
+  classmap = null;
+
+  API = API = (function() {
+
+    function API(username, token) {
+      this.username = username;
+      this.token = token;
+    }
+
+    API.prototype.gameIds = function() {
+      return [];
+    };
+
+    API.prototype.getGames = function() {
+      return [];
+    };
+
+    API.prototype.getGame = function(id) {
+      return false;
+    };
+
+    API.prototype.saveGame = function(game) {
+      return false;
+    };
+
+    return API;
+
+  })();
+
+  LocalAPI = LocalAPI = (function() {
+
+    __extends(LocalAPI, API);
+
+    function LocalAPI(username, token) {
+      this.username = username;
+      this.token = token;
+      LocalAPI.__super__.constructor.call(this, this.username, this.token);
+      if (!(this.getGames() != null)) {
+        this.save(this.gamesKey(), {});
+        this.save(this.gameIdsKey(), []);
+      }
+    }
+
+    LocalAPI.prototype.load = function(key) {
+      var item;
+      item = window.localStorage.getItem(key);
+      item = JSON.parse(item);
+      Serializable.deserialize(item, classmap);
+      return item;
+    };
+
+    LocalAPI.prototype.save = function(key, value) {
+      return window.localStorage.setItem(key, JSON.stringify(value));
+    };
+
+    LocalAPI.prototype.gamesKey = function() {
+      return this.username + '!!!games';
+    };
+
+    LocalAPI.prototype.gameIdsKey = function() {
+      return this.username + '!!!game_ids';
+    };
+
+    LocalAPI.prototype.gameIds = function() {
+      return this.load(this.gameIdsKey());
+    };
+
+    LocalAPI.prototype.getGame = function(id) {
+      return this.getGames()[id];
+    };
+
+    LocalAPI.prototype.getGames = function() {
+      return this.load(this.gamesKey());
+    };
+
+    LocalAPI.prototype.saveGame = function(game) {
+      var game_ids, games, _ref;
+      games = this.getGames();
+      game_ids = this.gameIds();
+      if (!(_ref = game.id, __indexOf.call(game_ids, _ref) >= 0)) {
+        game_ids.push(game.id);
+        this.save(this.gameIdsKey(), game_ids);
+      }
+      games[game.id] = game;
+      return this.save(this.gamesKey(), games);
+    };
+
+    return LocalAPI;
+
+  })();
+
+  classmap = Serializable.buildClassMap(Turns.Game, Turns.Turn, Turns.Player, GameObject, GameObject2D, Explosion, State, Square, Command.Command, Command.MouseCommand, Command.JoinCommand, Command.ExplodeCommand);
+
+  exports.API = API;
+
+  exports.LocalAPI = LocalAPI;
+
+}).call(this);
+
+});
+
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var Timeboats, Turns, timestamp;
+  var API, Timeboats, Turns, UUID, drawGames, timestamp;
 
   Timeboats = require('./timeboats.coffee').Timeboats;
 
   Turns = require('./turns.coffee');
 
+  API = require('./api.coffee');
+
+  UUID = require('./lib/uuid.js');
+
   timestamp = function() {
     return +new Date();
   };
 
+  drawGames = function(game_ids, games) {
+    var html;
+    html = new EJS({
+      element: 'games_template',
+      type: '<'
+    }).render({
+      games: games,
+      game_ids: game_ids
+    });
+    $('.games').replaceWith(html);
+    return $('#games_select').change(function() {
+      console.log('selected');
+      return $('#games_select option:selected').each(function() {
+        return window.gameClicked($(this).text());
+      });
+    });
+  };
+
   window.onload = function() {
-    var canvas, context, dt, frame, frame_num, game, gdt, last, order, player1, player2, players, rdt, timeboats;
+    var api, canvas, context, dt, frame, frame_num, game, game_ids, games, gdt, last, rdt, render, timeboats;
+    var _this = this;
     canvas = $('#game-canvas')[0];
     context = canvas.getContext('2d');
-    player1 = new Turns.Player(1, "white");
-    player2 = new Turns.Player(2, "red");
-    players = {
-      1: player1,
-      2: player2
+    api = new API.LocalAPI('chris', null);
+    game = null;
+    timeboats = null;
+    render = false;
+    window.gameClicked = function(id) {
+      render = false;
+      game = api.getGame(id);
+      timeboats = new Timeboats(game, context, canvas.width, canvas.height, api);
+      timeboats.turnClicked(null);
+      return render = true;
     };
-    order = [1, 2];
-    game = new Turns.Game(1, players, order);
-    timeboats = new Timeboats(game, context, canvas.width, canvas.height);
+    game_ids = api.gameIds();
+    games = api.getGames();
+    drawGames(game_ids, games);
+    console.log(games, game_ids);
+    if (game_ids.length > 0) {
+      console.log("Loading game", game_ids[0]);
+      game = api.getGame(game_ids[0]);
+      console.log(game_ids[0], games, game);
+      timeboats = new Timeboats(game, context, canvas.width, canvas.height, api);
+      timeboats.turnClicked(null);
+      console.log(game, timeboats);
+      render = true;
+    }
+    $('#newgame').click(function() {
+      var order, player1, player2, players;
+      render = false;
+      player1 = new Turns.Player(1, "white");
+      player2 = new Turns.Player(2, "red");
+      players = {
+        1: player1,
+        2: player2
+      };
+      order = [1, 2];
+      $("#playbutton").prop("disabled", true);
+      game = new Turns.Game(UUID.generate(), players, order);
+      timeboats = new Timeboats(game, context, canvas.width, canvas.height, api);
+      timeboats.turnClicked(null);
+      return render = true;
+    });
     $("#addbutton").prop("disabled", true);
     $("#addbutton").click(function() {
+      if (!(timeboats != null)) return;
       return timeboats.addClick();
     });
     $("#playbutton").click(function() {
+      if (!(timeboats != null)) return;
       return timeboats.playClick();
     });
     $("#timeslider").change(function() {
+      if (!(timeboats != null)) return;
       return timeboats.sliderDrag($("#timeslider").val());
     });
     window.turnClicked = function(number) {
+      if (!(timeboats != null)) return;
       return timeboats.turnClicked(number);
     };
     canvas.onmousedown = function(e) {
+      if (!(timeboats != null)) return;
       return timeboats.onMouseDown(e);
     };
     canvas.onmousemove = function(e) {
       var canoffset, x, y;
+      if (!(timeboats != null)) return;
       canoffset = $(canvas).offset();
       x = event.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - Math.floor(canoffset.left);
       y = event.clientY + document.body.scrollTop + document.documentElement.scrollTop - Math.floor(canoffset.top) + 1;
@@ -1839,18 +2097,21 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     frame_num = 0;
     frame = function() {
       var now;
-      frame_num += 1;
-      now = timestamp();
-      dt = Math.min(1, (now - last) / 1000);
-      gdt = gdt + dt;
-      while (gdt > timeboats.timestep) {
-        gdt = gdt - timeboats.timestep;
-        timeboats.update(timeboats.timestep);
-      }
-      rdt = rdt + dt;
-      if (rdt > timeboats.renderstep) {
-        rdt = rdt - timeboats.renderstep;
-        timeboats.draw();
+      if (render) {
+        frame_num += 1;
+        now = timestamp();
+        if (!(last != null)) last = now;
+        dt = Math.min(1, (now - last) / 1000);
+        gdt = gdt + dt;
+        while (gdt > timeboats.timestep) {
+          gdt = gdt - timeboats.timestep;
+          timeboats.update(timeboats.timestep);
+        }
+        rdt = rdt + dt;
+        if (rdt > timeboats.renderstep) {
+          rdt = rdt - timeboats.renderstep;
+          timeboats.draw();
+        }
         context.fillText("" + Math.floor(1 / dt), 10, 10);
       }
       last = now;

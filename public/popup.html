@@ -22,11 +22,24 @@
     </div>
   </div>
   <div id="players">
+    <div id="games_container" class="container">
+    <h4>Games</h4>
+    <div id="games_selector">
+      <button id="newgame">New Game</button>
+      <div class="games"></div>
+    </div>
+    </div>
+    <div id="player_tile_container" class="container">
+    <h4>Players</h4>
     <div id="player_tiles">
       <div class="header">Players</div>
     </div>
+    </div>
+    <div id="turn_tile_container" class="container">
+    <h4>Turns</h4>
     <div id="turn_tiles">
       <div class="header">Turns</div>
+    </div>
     </div>
      <div id="player_controls">
       <button id="addbutton">Record Move</button>
@@ -41,21 +54,31 @@
   </div>
 
   <!-- templates -->
-  <div id="player_template" style="display: none">
+  <script id="player_template" type='text/ejs'>
     <div id="[%= id %]" class="player [%= active %]">
       <span class="player_name">[%= name %]</span>
       <span class="player_score">[%= score %]</span>
     </div>
-  </div>
+  </script>
 
-  <div id="turn_template" style="display: none">
+  <script id="turn_template" type='text/ejs'>
     <div id="[%= id %]" class="turn [%= active %]">
       <span class="turn_number">[%= turn_number + 1 %].</span>
       <span class="player_name">[%= player_name %]:</span>
       <span class="turn_time" title="[%= turn_time %]">[%= turn_time %]</span>
       <script>$('.turn_time').timeago();</script>
     </div>
-  </div>
+  </script>
+
+  <script id="games_template" type='text/ejs'>
+    <div class="games">
+      <select name="games_select" id="games_select">
+        [% for (var i=0; i<game_ids.length; i++) { %]
+          <option value="[%= game_ids[i] %]">[%= game_ids[i] %]</option>
+        [% } %]
+      </select>
+    </div>
+  </script>
 </body>
 
 </html>

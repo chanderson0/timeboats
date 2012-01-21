@@ -5,7 +5,7 @@ Point = require('./point.coffee').Point
 Map = require('./map.coffee').Map
 
 exports.Timeboats = class Timeboats
-  constructor: (@game, @context, @width, @height) ->
+  constructor: (@game, @context, @width, @height, @api = null) ->
     @timestep = 1 / 60
     @renderstep = 1 / 60
 
@@ -14,12 +14,16 @@ exports.Timeboats = class Timeboats
     @frame_history = [new State()]
     @command_history = []
     @setFrameNum(0)
-
     @active_commands = []
 
-    Map.getInstance().generate @width / Map.CELL_SIZE_PX,
-      @height / Map.CELL_SIZE_PX,
-      new Date().getTime()
+    if not @game.mapSeed?
+      @game.setMap new Date().getTime()
+    
+    Map.getInstance().generate width / Map.CELL_SIZE_PX,
+      height / Map.CELL_SIZE_PX,
+      @game.mapSeed
+
+    @game.render()
 
   playClick: ->
     if @gamestate == "init" || @gamestate == "ready"
@@ -38,7 +42,7 @@ exports.Timeboats = class Timeboats
     console.log oldState, '->', newState
 
     if (oldState == "init" || oldState == "ready") and newState == "recording"
-      player = new Square(@game.turn_id, 100, 100, 20, @game.currentPlayer().color)
+      player = new Square(@game.next_turn_id, 100, 100, 20, @game.currentPlayer().color)
       command = new Command.JoinCommand player.id, player
       @addCommand @command_history, command
       @addCommand @active_commands, command
@@ -49,7 +53,7 @@ exports.Timeboats = class Timeboats
       $("#playbutton").prop "disabled", true
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", true
-    else if oldState == "paused" and newState == "rerecording"
+    else if (oldState == "init" || oldState == "paused") and newState == "rerecording"
       @gamestate = "rerecording"
 
       # TODO: enforce no stopping
@@ -63,8 +67,9 @@ exports.Timeboats = class Timeboats
 
       @setFrameNum(0)
 
-      $("#playbutton").html "Play"
-      $("#playbutton").prop "disabled", false
+      if @game.turns.length > 0
+        $("#playbutton").html "Play"
+        $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", false
     else if oldState == "recording" and newState == "paused"
@@ -73,16 +78,21 @@ exports.Timeboats = class Timeboats
       @game.nextTurn()
 
       @setFrameNum(0)
+      if @api?
+        @api.saveGame @game
+
       @gamestate = "paused"
 
-      $("#playbutton").html "Play"
-      $("#playbutton").prop "disabled", false
+      if @game.turns.length > 0
+        $("#playbutton").html "Play"
+        $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", false
     else if oldState == "paused" and newState == "playing"
       @gamestate = "playing"
 
       $("#playbutton").html "Pause"
+      $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", true
     else if oldState == "paused" and newState == "ready"
@@ -97,6 +107,7 @@ exports.Timeboats = class Timeboats
       @gamestate = "ready"
 
       $("#playbutton").html "Start"
+      $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", true
     else if (oldState == "playing" || oldState == "ready") and newState == "paused"
@@ -122,7 +133,10 @@ exports.Timeboats = class Timeboats
       $("#timeslider").prop 'max', max
 
   turnClicked: (number) ->
-    if @gamestate == "paused"
+    if @gamestate == "paused" || @gamestate == "init"
+      if number == null
+        number = @game.latestTurnNumber()
+
       @game.setTurn(number)
       @command_history = @game.computeCommands()
 
@@ -134,8 +148,6 @@ exports.Timeboats = class Timeboats
   sliderDrag: (value) ->
     if @gamestate == "paused"
       @setFrameNum(value, false)
-    else
-      @updateState @gamestate, "paused"
 
   addCommand: (buffer, command) ->
     while @frame_num >= buffer.length
@@ -187,16 +199,16 @@ exports.Timeboats = class Timeboats
   draw: ->
     @context.clearRect 0, 0, @width + 1, @height + 1
     Map.getInstance().draw @context
-    @frame_history[@frame_num].draw @context, active: @game.turn_id
+    @frame_history[@frame_num].draw @context, active: @game.next_turn_id
 
   onMouseDown: (e) =>
     if @gamestate == "recording"
-      command = new Command.ExplodeCommand @game.turn_id
+      command = new Command.ExplodeCommand @game.next_turn_id
       @addCommand @command_history, command
       @addCommand @active_commands, command
 
   onMouseMove: (e) =>
     if @gamestate == "recording"
-      command = new Command.MouseCommand @game.turn_id, e[0], e[1]
+      command = new Command.MouseCommand @game.next_turn_id, e[0], e[1]
       @addCommand @command_history, command
       @addCommand @active_commands, command
