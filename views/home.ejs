@@ -5,7 +5,9 @@
   <title>Time Boats</title>
 
   <link rel="stylesheet" href="css/timeboats.css">
+  <script src="js/ejs_production.js"></script>
   <script src="js/jquery.min.js"></script>
+  <script src="js/jquery.timeago.js"></script>
   <script src="js/requestAnimationFrame.js"></script>
   <script src="js/timeboats.js"></script>
 </head>
@@ -13,29 +15,77 @@
 <body>
   <div id="game">
     <canvas id="game-canvas" height="384" width="576"></canvas>
+    <div id="controls">
+      <button id="playbutton">Play</button>
+      <input id="timeslider" type="range" min="0" max="0" value="0" />
+    </div>
   </div>
-  <div id="controls">
-    <button id="playbutton" style="width: 50px">Start</button>
-    <button id="addbutton" style="width: 80px">Add New</button>
-    <input id="timeslider" type="range" min="0" max="0" value="0" style="width: 300px"/>
+  <div id="players">
+    <div id="games_container" class="container">
+    <h4>Games</h4>
+    <div id="games_selector">
+      <button id="newgame">New Game</button>
+      <div class="games"></div>
+    </div>
+    </div>
+    <div id="player_tile_container" class="container">
+    <h4>Players</h4>
+    <div id="player_tiles">
+      <div class="header">Players</div>
+    </div>
+    </div>
+    <div id="turn_tile_container" class="container">
+    <h4>Turns</h4>
+    <div id="turn_tiles">
+      <div class="header">Turns</div>
+    </div>
+    </div>
+     <div id="player_controls">
+      <button id="addbutton">Record Move</button>
+      <!--<button id="newplayer">New Player</button>-->
+    </div>
   </div>
-  <% if ('undefined' === typeof game) { %>
-    <form action="/game" method="POST">
-    <p><label for="name">Game name:</label><br />
-    <input id="name" name="name"></p>
-    <p><input type="submit" /></p>
-    </form>
-  <% } %>
+  <div style="clear:both"></div>
   <div id="instructions">
     <p>Mouse to move.</p>
-    <p>Click once to start recording. Click again to stop recording and stop playback. Click in the middle of playback to interrupt.</p>
-    
+    <p>Click once to start recording. Click again to stop recording 
+    and stop playback. Click in the middle of playback to interrupt.</p>
+
     <% if (!everyauth.loggedIn) { %>
       <p><a href="/auth/facebook">Login with facebook</a></p>
     <% } else { %>
       <p>You're logged in with Facebook, <%= everyauth.user.name %></p>
     <% } %>
   </div>
+
+  <!-- templates -->
+  <script id="player_template" type='text/ejs'>
+    <div id="[%= id %]" class="player [%= active %]">
+      <span class="player_name">[%= name %]</span>
+      <span class="player_score">[%= score %]</span>
+    </div>
+  </script>
+
+  <script id="turn_template" type='text/ejs'>
+    <div id="[%= id %]" class="turn [%= active %]">
+      <span class="turn_number">[%= turn_number + 1 %].</span>
+      <span class="player_name">[%= player_name %]:</span>
+      <span class="turn_time" title="[%= turn_time %]">[%= turn_time %]</span>
+      <script>$('.turn_time').timeago();</script>
+    </div>
+  </script>
+
+  <script id="games_template" type='text/ejs'>
+    <div class="games">
+      <select name="games_select" id="games_select">
+        [% for (var i=0; i<game_ids.length; i++) { %]
+          <option value="[%= game_ids[i] %]">[%= game_ids[i] %]</option>
+        [% } %]
+      </select>
+    </div>
+  </script>
 </body>
+
+</html>
 
 </html>
