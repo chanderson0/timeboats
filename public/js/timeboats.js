@@ -340,6 +340,245 @@ exports.extname = function(path) {
 
 });
 
+require.define("/timeboats.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var Command, Map, Point, Square, State, Timeboats;
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  State = require('./state.coffee').State;
+
+  Square = require('./square.coffee').Square;
+
+  Command = require('./command.coffee');
+
+  Point = require('./point.coffee').Point;
+
+  Map = require('./map.coffee').Map;
+
+  exports.Timeboats = Timeboats = (function() {
+
+    function Timeboats(game, context, width, height, api) {
+      this.game = game;
+      this.context = context;
+      this.width = width;
+      this.height = height;
+      this.api = api != null ? api : null;
+      this.onMouseMove = __bind(this.onMouseMove, this);
+      this.onMouseDown = __bind(this.onMouseDown, this);
+      this.timestep = 1 / 60;
+      this.renderstep = 1 / 60;
+      this.gamestate = "init";
+      this.frame_history = [new State()];
+      this.command_history = [];
+      this.setFrameNum(0);
+      this.active_commands = [];
+      if (!(this.game.mapSeed != null)) this.game.setMap(new Date().getTime());
+      Map.getInstance().generate(width / Map.CELL_SIZE_PX, height / Map.CELL_SIZE_PX, this.game.mapSeed);
+      this.game.render();
+    }
+
+    Timeboats.prototype.playClick = function() {
+      if (this.gamestate === "init" || this.gamestate === "ready") {
+        return this.updateState("init", "recording");
+      } else if (this.gamestate === "recording") {
+        return this.updateState("recording", "paused");
+      } else if (this.gamestate === "paused") {
+        return this.updateState("paused", "playing");
+      } else if (this.gamestate === "playing") {
+        return this.updateState("playing", "paused");
+      }
+    };
+
+    Timeboats.prototype.addClick = function() {
+      return this.updateState(this.gamestate, "ready");
+    };
+
+    Timeboats.prototype.updateState = function(oldState, newState) {
+      var command, player;
+      console.log(oldState, '->', newState);
+      if ((oldState === "init" || oldState === "ready") && newState === "recording") {
+        player = new Square(this.game.next_turn_id, 100, 100, 20, this.game.currentPlayer().color);
+        command = new Command.JoinCommand(player.id, player);
+        this.addCommand(this.command_history, command);
+        this.addCommand(this.active_commands, command);
+        this.gamestate = "recording";
+        $("#playbutton").html("Stop");
+        $("#playbutton").prop("disabled", true);
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", true);
+      } else if ((oldState === "init" || oldState === "paused") && newState === "rerecording") {
+        this.gamestate = "rerecording";
+        $("#playbutton").html("Stop");
+        $("#playbutton").prop("disabled", true);
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", true);
+      } else if (oldState === "rerecording" && newState === "paused") {
+        this.gamestate = "paused";
+        this.setFrameNum(0);
+        if (this.game.turns.length > 0) {
+          $("#playbutton").html("Play");
+          $("#playbutton").prop("disabled", false);
+        }
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", false);
+      } else if (oldState === "recording" && newState === "paused") {
+        this.game.recordTurn(this.active_commands);
+        this.active_commands = [];
+        this.game.nextTurn();
+        this.setFrameNum(0);
+        if (this.api != null) {
+          this.api.saveGame(this.game, function(err, worked) {
+            if (err || !worked) return alert("Couldn't save game");
+          });
+        }
+        this.gamestate = "paused";
+        if (this.game.turns.length > 0) {
+          $("#playbutton").html("Play");
+          $("#playbutton").prop("disabled", false);
+        }
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", false);
+      } else if (oldState === "paused" && newState === "playing") {
+        this.gamestate = "playing";
+        $("#playbutton").html("Pause");
+        $("#playbutton").prop("disabled", false);
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", true);
+      } else if (oldState === "paused" && newState === "ready") {
+        this.setFrameNum(0);
+        if (!this.game.isLatestTurn()) {
+          this.game.setTurn(this.game.latestTurnNumber());
+          this.command_history = this.game.computeCommands();
+          this.frame_history = [this.frame_history[this.frame_num]];
+        }
+        this.gamestate = "ready";
+        $("#playbutton").html("Start");
+        $("#playbutton").prop("disabled", false);
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", true);
+      } else if ((oldState === "playing" || oldState === "ready") && newState === "paused") {
+        this.gamestate = "paused";
+        $("#playbutton").html("Play");
+        $("#addbutton").html("Ready Next");
+        return $("#addbutton").prop("disabled", false);
+      } else {
+        return console.log("couldn't switch state");
+      }
+    };
+
+    Timeboats.prototype.setFrameNum = function(value, updateSlider) {
+      if (updateSlider == null) updateSlider = true;
+      this.frame_num = value;
+      Map.getInstance().setFrame(value);
+      Map.getInstance().computeTerrainState();
+      if (updateSlider) return this.updateSlider(value);
+    };
+
+    Timeboats.prototype.updateSlider = function(value, max) {
+      if (max == null) max = -1;
+      $("#timeslider").prop('value', value);
+      if (max > 0) return $("#timeslider").prop('max', max);
+    };
+
+    Timeboats.prototype.turnClicked = function(number) {
+      if (this.gamestate === "paused" || this.gamestate === "init") {
+        if (number === null) number = this.game.latestTurnNumber();
+        this.game.setTurn(number);
+        this.command_history = this.game.computeCommands();
+        this.setFrameNum(0);
+        this.frame_history = [this.frame_history[this.frame_num]];
+        return this.updateState("paused", "rerecording");
+      }
+    };
+
+    Timeboats.prototype.sliderDrag = function(value) {
+      if (this.gamestate === "paused") {
+        return this.setFrameNum(parseInt(value), false);
+      }
+    };
+
+    Timeboats.prototype.addCommand = function(buffer, command) {
+      while (this.frame_num >= buffer.length) {
+        buffer.push([]);
+      }
+      return buffer[this.frame_num].push(command);
+    };
+
+    Timeboats.prototype.update = function(dt) {
+      var id, next_state, object, player_count, _ref;
+      Map.getInstance().update(dt);
+      if (this.gamestate === "recording" || this.gamestate === "rerecording") {
+        Map.getInstance().setFrame(this.frame_num + 1, true);
+        next_state = this.frame_history[this.frame_num].clone();
+        next_state.setCommands(this.command_history[this.frame_num] || []);
+        next_state.update(dt);
+        this.setFrameNum(this.frame_num + 1);
+        if (this.frame_history.length > this.frame_num) {
+          this.frame_history[this.frame_num] = next_state;
+        } else {
+          this.frame_history.push(next_state);
+        }
+        this.updateSlider(this.frame_num, this.frame_history.length - 1);
+        if (this.frame_num > 0) {
+          player_count = 0;
+          _ref = next_state.objects;
+          for (id in _ref) {
+            object = _ref[id];
+            if (object.__type === 'Square' || object.__type === 'Explosion') {
+              player_count++;
+            }
+          }
+          if (player_count === 0) {
+            this.frame_history.splice(this.frame_num + 1, this.frame_history.length - this.frame_num);
+            this.updateSlider(this.frame_num, this.frame_num);
+            return this.updateState(this.gamestate, "paused");
+          }
+        }
+      } else if (this.gamestate === "playing") {
+        this.setFrameNum(this.frame_num + 1);
+        if (this.frame_num >= this.frame_history.length) {
+          this.updateState("playing", "paused");
+          return this.setFrameNum(0);
+        }
+      } else if (this.gamestate === "paused") {
+        return this.state = this.frame_history[this.frame_num];
+      }
+    };
+
+    Timeboats.prototype.draw = function() {
+      this.context.clearRect(0, 0, this.width + 1, this.height + 1);
+      Map.getInstance().draw(this.context);
+      return this.frame_history[this.frame_num].draw(this.context, {
+        active: this.game.next_turn_id
+      });
+    };
+
+    Timeboats.prototype.onMouseDown = function(e) {
+      var command;
+      if (this.gamestate === "recording") {
+        command = new Command.ExplodeCommand(this.game.next_turn_id);
+        this.addCommand(this.command_history, command);
+        return this.addCommand(this.active_commands, command);
+      }
+    };
+
+    Timeboats.prototype.onMouseMove = function(e) {
+      var command;
+      if (this.gamestate === "recording") {
+        command = new Command.MouseCommand(this.game.next_turn_id, e[0], e[1]);
+        this.addCommand(this.command_history, command);
+        return this.addCommand(this.active_commands, command);
+      }
+    };
+
+    return Timeboats;
+
+  })();
+
+}).call(this);
+
+});
+
 require.define("/state.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
   var Serializable, State;
@@ -2519,245 +2758,6 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
     };
 
 }());
-});
-
-require.define("/timeboats.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
-  var Command, Map, Point, Square, State, Timeboats;
-  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
-
-  State = require('./state.coffee').State;
-
-  Square = require('./square.coffee').Square;
-
-  Command = require('./command.coffee');
-
-  Point = require('./point.coffee').Point;
-
-  Map = require('./map.coffee').Map;
-
-  exports.Timeboats = Timeboats = (function() {
-
-    function Timeboats(game, context, width, height, api) {
-      this.game = game;
-      this.context = context;
-      this.width = width;
-      this.height = height;
-      this.api = api != null ? api : null;
-      this.onMouseMove = __bind(this.onMouseMove, this);
-      this.onMouseDown = __bind(this.onMouseDown, this);
-      this.timestep = 1 / 60;
-      this.renderstep = 1 / 60;
-      this.gamestate = "init";
-      this.frame_history = [new State()];
-      this.command_history = [];
-      this.setFrameNum(0);
-      this.active_commands = [];
-      if (!(this.game.mapSeed != null)) this.game.setMap(new Date().getTime());
-      Map.getInstance().generate(width / Map.CELL_SIZE_PX, height / Map.CELL_SIZE_PX, this.game.mapSeed);
-      this.game.render();
-    }
-
-    Timeboats.prototype.playClick = function() {
-      if (this.gamestate === "init" || this.gamestate === "ready") {
-        return this.updateState("init", "recording");
-      } else if (this.gamestate === "recording") {
-        return this.updateState("recording", "paused");
-      } else if (this.gamestate === "paused") {
-        return this.updateState("paused", "playing");
-      } else if (this.gamestate === "playing") {
-        return this.updateState("playing", "paused");
-      }
-    };
-
-    Timeboats.prototype.addClick = function() {
-      return this.updateState(this.gamestate, "ready");
-    };
-
-    Timeboats.prototype.updateState = function(oldState, newState) {
-      var command, player;
-      console.log(oldState, '->', newState);
-      if ((oldState === "init" || oldState === "ready") && newState === "recording") {
-        player = new Square(this.game.next_turn_id, 100, 100, 20, this.game.currentPlayer().color);
-        command = new Command.JoinCommand(player.id, player);
-        this.addCommand(this.command_history, command);
-        this.addCommand(this.active_commands, command);
-        this.gamestate = "recording";
-        $("#playbutton").html("Stop");
-        $("#playbutton").prop("disabled", true);
-        $("#addbutton").html("Ready Next");
-        return $("#addbutton").prop("disabled", true);
-      } else if ((oldState === "init" || oldState === "paused") && newState === "rerecording") {
-        this.gamestate = "rerecording";
-        $("#playbutton").html("Stop");
-        $("#playbutton").prop("disabled", true);
-        $("#addbutton").html("Ready Next");
-        return $("#addbutton").prop("disabled", true);
-      } else if (oldState === "rerecording" && newState === "paused") {
-        this.gamestate = "paused";
-        this.setFrameNum(0);
-        if (this.game.turns.length > 0) {
-          $("#playbutton").html("Play");
-          $("#playbutton").prop("disabled", false);
-        }
-        $("#addbutton").html("Ready Next");
-        return $("#addbutton").prop("disabled", false);
-      } else if (oldState === "recording" && newState === "paused") {
-        this.game.recordTurn(this.active_commands);
-        this.active_commands = [];
-        this.game.nextTurn();
-        this.setFrameNum(0);
-        if (this.api != null) {
-          this.api.saveGame(this.game, function(err, worked) {
-            if (err || !worked) return alert("Couldn't save game");
-          });
-        }
-        this.gamestate = "paused";
-        if (this.game.turns.length > 0) {
-          $("#playbutton").html("Play");
-          $("#playbutton").prop("disabled", false);
-        }
-        $("#addbutton").html("Ready Next");
-        return $("#addbutton").prop("disabled", false);
-      } else if (oldState === "paused" && newState === "playing") {
-        this.gamestate = "playing";
-        $("#playbutton").html("Pause");
-        $("#playbutton").prop("disabled", false);
-        $("#addbutton").html("Ready Next");
-        return $("#addbutton").prop("disabled", true);
-      } else if (oldState === "paused" && newState === "ready") {
-        this.setFrameNum(0);
-        if (!this.game.isLatestTurn()) {
-          this.game.setTurn(this.game.latestTurnNumber());
-          this.command_history = this.game.computeCommands();
-          this.frame_history = [this.frame_history[this.frame_num]];
-        }
-        this.gamestate = "ready";
-        $("#playbutton").html("Start");
-        $("#playbutton").prop("disabled", false);
-        $("#addbutton").html("Ready Next");
-        return $("#addbutton").prop("disabled", true);
-      } else if ((oldState === "playing" || oldState === "ready") && newState === "paused") {
-        this.gamestate = "paused";
-        $("#playbutton").html("Play");
-        $("#addbutton").html("Ready Next");
-        return $("#addbutton").prop("disabled", false);
-      } else {
-        return console.log("couldn't switch state");
-      }
-    };
-
-    Timeboats.prototype.setFrameNum = function(value, updateSlider) {
-      if (updateSlider == null) updateSlider = true;
-      this.frame_num = value;
-      Map.getInstance().setFrame(value);
-      Map.getInstance().computeTerrainState();
-      if (updateSlider) return this.updateSlider(value);
-    };
-
-    Timeboats.prototype.updateSlider = function(value, max) {
-      if (max == null) max = -1;
-      $("#timeslider").prop('value', value);
-      if (max > 0) return $("#timeslider").prop('max', max);
-    };
-
-    Timeboats.prototype.turnClicked = function(number) {
-      if (this.gamestate === "paused" || this.gamestate === "init") {
-        if (number === null) number = this.game.latestTurnNumber();
-        this.game.setTurn(number);
-        this.command_history = this.game.computeCommands();
-        this.setFrameNum(0);
-        this.frame_history = [this.frame_history[this.frame_num]];
-        return this.updateState("paused", "rerecording");
-      }
-    };
-
-    Timeboats.prototype.sliderDrag = function(value) {
-      if (this.gamestate === "paused") {
-        return this.setFrameNum(parseInt(value), false);
-      }
-    };
-
-    Timeboats.prototype.addCommand = function(buffer, command) {
-      while (this.frame_num >= buffer.length) {
-        buffer.push([]);
-      }
-      return buffer[this.frame_num].push(command);
-    };
-
-    Timeboats.prototype.update = function(dt) {
-      var id, next_state, object, player_count, _ref;
-      Map.getInstance().update(dt);
-      if (this.gamestate === "recording" || this.gamestate === "rerecording") {
-        Map.getInstance().setFrame(this.frame_num + 1, true);
-        next_state = this.frame_history[this.frame_num].clone();
-        next_state.setCommands(this.command_history[this.frame_num] || []);
-        next_state.update(dt);
-        this.setFrameNum(this.frame_num + 1);
-        if (this.frame_history.length > this.frame_num) {
-          this.frame_history[this.frame_num] = next_state;
-        } else {
-          this.frame_history.push(next_state);
-        }
-        this.updateSlider(this.frame_num, this.frame_history.length - 1);
-        if (this.frame_num > 0) {
-          player_count = 0;
-          _ref = next_state.objects;
-          for (id in _ref) {
-            object = _ref[id];
-            if (object.__type === 'Square' || object.__type === 'Explosion') {
-              player_count++;
-            }
-          }
-          if (player_count === 0) {
-            this.frame_history.splice(this.frame_num + 1, this.frame_history.length - this.frame_num);
-            this.updateSlider(this.frame_num, this.frame_num);
-            return this.updateState(this.gamestate, "paused");
-          }
-        }
-      } else if (this.gamestate === "playing") {
-        this.setFrameNum(this.frame_num + 1);
-        if (this.frame_num >= this.frame_history.length) {
-          this.updateState("playing", "paused");
-          return this.setFrameNum(0);
-        }
-      } else if (this.gamestate === "paused") {
-        return this.state = this.frame_history[this.frame_num];
-      }
-    };
-
-    Timeboats.prototype.draw = function() {
-      this.context.clearRect(0, 0, this.width + 1, this.height + 1);
-      Map.getInstance().draw(this.context);
-      return this.frame_history[this.frame_num].draw(this.context, {
-        active: this.game.next_turn_id
-      });
-    };
-
-    Timeboats.prototype.onMouseDown = function(e) {
-      var command;
-      if (this.gamestate === "recording") {
-        command = new Command.ExplodeCommand(this.game.next_turn_id);
-        this.addCommand(this.command_history, command);
-        return this.addCommand(this.active_commands, command);
-      }
-    };
-
-    Timeboats.prototype.onMouseMove = function(e) {
-      var command;
-      if (this.gamestate === "recording") {
-        command = new Command.MouseCommand(this.game.next_turn_id, e[0], e[1]);
-        this.addCommand(this.command_history, command);
-        return this.addCommand(this.active_commands, command);
-      }
-    };
-
-    return Timeboats;
-
-  })();
-
-}).call(this);
-
 });
 
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
