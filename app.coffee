@@ -33,14 +33,32 @@ Move = mongoose.model 'Move', new Schema
   user: 
     type: ObjectId
     ref: 'User'
-  length: Number
   data: String
-  comment: String
   created:
     type: Date
     default: Date.now
 
+PlayerSchema = new Schema
+  id: String
+  color: String
+
+TurnSchema = new Schema
+  id: String
+  player_id: String
+  commands: [String]
+  time: Date
+
+GameSchema = new Schema
+  id: String
+  current_player_id: Number
+  turn_idx: Number
+  mapSeed: Number
+  order: [String]
+  players: [PlayerSchema]
+  turns: [TurnSchema]
+
 Game = mongoose.model 'Game', new Schema
+  id: String
   status: String
   moves: [Move]
   invites: [

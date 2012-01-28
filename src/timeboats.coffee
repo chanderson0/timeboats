@@ -79,7 +79,9 @@ exports.Timeboats = class Timeboats
 
       @setFrameNum(0)
       if @api?
-        @api.saveGame @game
+        @api.saveGame @game, (err, worked) ->
+          if err or not worked
+            alert "Couldn't save game"
 
       @gamestate = "paused"
 

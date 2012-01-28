@@ -6,32 +6,38 @@ State = require('./state.coffee').State
 Square = require('./square.coffee').Square
 Command = require('./command.coffee')
 Serializable = require('./serializable.coffee').Serializable
+async = require('./lib/async.js')
 
 classmap = null
 
 API = class API
   constructor: (@username, @token) ->
   
-  gameIds: ->
-    []
+  gameIds: (cb) ->
+    cb false, []
 
-  getGames: ->
-    return []
+  getGames: (cb) ->
+    cb false, []
 
-  getGame: (id) ->
-    return false
+  getGame: (id, cb) ->
+    cb true, null
     
   # Design decision: save whole game to API. API must
   # do validation to make sure this isn't cheating!
-  saveGame: (game) ->
-    return false
+  saveGame: (game, cb) ->
+    cb true, null
   
 LocalAPI = class LocalAPI extends API
   constructor: (@username, @token) ->
     super @username, @token
-    if not @getGames()?
-      @save @gamesKey(), {}
-      @save @gameIdsKey(), []
+    @getGames (err, games) ->
+      if err
+        alert "Couldn't start API"
+        return
+
+      if not games
+        @save @gamesKey(), {}
+        @save @gameIdsKey(), []
 
   load: (key) ->
     item = window.localStorage.getItem key
@@ -48,25 +54,72 @@ LocalAPI = class LocalAPI extends API
   gameIdsKey: ->
     @username + '!!!game_ids'
 
-  gameIds: ->
-    @load @gameIdsKey()
+  gameIds: (cb) =>
+    cb false, @load @gameIdsKey()
 
-  getGame: (id) ->
-    @getGames()[id]
+  getGame: (id, cb) =>
+    @getGames (err, games) =>
+      if err
+        return cb err, null
+      
+      cb false, games[id]
 
-  getGames: ->
-    @load @gamesKey()
+  getGames: (cb) =>
+    cb false, @load @gamesKey()
 
-  saveGame: (game) ->
-    games = @getGames()
-    game_ids = @gameIds()
-    if not (game.id in game_ids)
-      game_ids.push game.id
-      @save @gameIdsKey(), game_ids
+  saveGame: (game, cb) =>
+    async.parallel {
+      game_ids: @gameIds
+      games: @getGames
+    }, 
+    (err, data) =>
+      if err
+        return cb err, null
+
+      game_ids = data.game_ids
+      games = data.games
+
+      if not (game.id in game_ids)
+        game_ids.push game.id
+        @save @gameIdsKey(), game_ids
     
-    games[game.id] = game
-    
-    @save @gamesKey(), games
+      games[game.id] = game
+      @save @gamesKey(), games
+
+      cb false, true
+
+RemoteAPI = class RemoteAPI extends API
+  constructor: (@host, @username, @token) ->
+    super @username, @token
+  
+  request: (method, params, callback) ->
+    url = @host + method + '?' + $.params + '&callback=?'
+    $.getJSON url, (data) -> 
+      callback data
+      
+  gameIds: (cb) ->
+    url = @host + '/gameIds?callback=?'
+    $.getJSON url, (data) ->
+      cb data
+
+  getGames: (cb) ->
+    url = @host + '/games?callback=?'
+    $.getJSON url, (data) ->
+      cb data
+  
+  getGame: (id, cb) ->
+    url = @host + '/games/' + id + '?callback=?'
+    $.getJSON url, (data) ->
+      cb data
+  
+  saveGame: (game, cb) ->
+    url = @host + '/games/save?callback=?'
+    $.post url,
+      JSON.stringify(game),
+      ((data) ->
+        cb data
+      ),
+      'json'
 
 classmap = Serializable.buildClassMap Turns.Game, Turns.Turn, Turns.Player, \
   GameObject, GameObject2D, Explosion, State, Square, \

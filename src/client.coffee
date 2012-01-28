@@ -3,6 +3,7 @@ Timeboats = require('./timeboats.coffee').Timeboats
 Turns = require('./turns.coffee')
 API = require('./api.coffee')
 UUID = require('./lib/uuid.js')
+async = require('./lib/async.js')
 
 # Helper function.
 timestamp = ->
@@ -31,25 +32,37 @@ window.onload = ->
 
   window.gameClicked = (id) =>
     render = false
-    game = api.getGame id
-    timeboats = new Timeboats game, context, canvas.width, canvas.height, api
-    timeboats.turnClicked null
-    render = true
+    game = api.getGame id, (err, game) ->
+      if err
+        alert "couldn't load game " + id
+        return
+
+      timeboats = new Timeboats game, context, canvas.width, canvas.height, api
+      timeboats.turnClicked null
+      render = true
   
-  game_ids = api.gameIds()
-  games = api.getGames()
+  async.parallel {
+    game_ids: api.gameIds
+    games: api.getGames
+  }, 
+  (err, data) ->
+    game_ids = data.game_ids
+    games = data.games
 
-  drawGames game_ids, games
-
-  console.log games, game_ids
-  if game_ids.length > 0
-    console.log "Loading game", game_ids[0]
-    game = api.getGame game_ids[0]
-    console.log game_ids[0], games, game
-    timeboats = new Timeboats game, context, canvas.width, canvas.height, api
-    timeboats.turnClicked null
-    console.log game, timeboats
-    render = true
+    drawGames game_ids, games
+    console.log games, game_ids
+    if game_ids.length > 0
+      console.log "Loading game", game_ids[0]
+      game = api.getGame game_ids[0], (err, game) ->
+        if err
+          alert "couldn't load game " + id
+          return
+        
+        console.log game_ids[0], games, game
+        timeboats = new Timeboats game, context, canvas.width, canvas.height, api
+        timeboats.turnClicked null
+        console.log game, timeboats
+        render = true
 
   $('#newgame').click =>
     render = false
@@ -67,32 +80,32 @@ window.onload = ->
 
   $("#addbutton").prop "disabled", true
 
-  $("#addbutton").click ->
+  $("#addbutton").click =>
     if not timeboats?
       return
     timeboats.addClick()
 
-  $("#playbutton").click ->
+  $("#playbutton").click =>
     if not timeboats?
       return
     timeboats.playClick()
 
-  $("#timeslider").change ->
+  $("#timeslider").change =>
     if not timeboats?
       return
     timeboats.sliderDrag $("#timeslider").val()
 
-  window.turnClicked = (number) ->
+  window.turnClicked = (number) =>
     if not timeboats?
       return
     timeboats.turnClicked number
 
-  canvas.onmousedown = (e) ->
+  canvas.onmousedown = (e) =>
     if not timeboats?
       return
     timeboats.onMouseDown e
 
-  canvas.onmousemove = (e) ->
+  canvas.onmousemove = (e) =>
     if not timeboats?
       return
     canoffset = $(canvas).offset()
