@@ -1866,207 +1866,6 @@ UUID._hexAligner=UUID._getIntAligner(16);
 exports.generate = UUID.generate
 });
 
-require.define("/api.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
-  var API, Command, Explosion, GameObject, GameObject2D, LocalAPI, RemoteAPI, Serializable, Square, State, Turns, async, classmap;
-  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
-
-  Turns = require('./turns.coffee');
-
-  GameObject = require('./game_object.coffee').GameObject;
-
-  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
-
-  Explosion = require('./explosion.coffee').Explosion;
-
-  State = require('./state.coffee').State;
-
-  Square = require('./square.coffee').Square;
-
-  Command = require('./command.coffee');
-
-  Serializable = require('./serializable.coffee').Serializable;
-
-  async = require('./lib/async.js');
-
-  classmap = null;
-
-  API = API = (function() {
-
-    function API(username, token) {
-      this.username = username;
-      this.token = token;
-    }
-
-    API.prototype.gameIds = function(cb) {
-      return cb(false, []);
-    };
-
-    API.prototype.getGames = function(cb) {
-      return cb(false, []);
-    };
-
-    API.prototype.getGame = function(id, cb) {
-      return cb(true, null);
-    };
-
-    API.prototype.saveGame = function(game, cb) {
-      return cb(true, null);
-    };
-
-    return API;
-
-  })();
-
-  LocalAPI = LocalAPI = (function() {
-
-    __extends(LocalAPI, API);
-
-    function LocalAPI(username, token) {
-      this.username = username;
-      this.token = token;
-      this.saveGame = __bind(this.saveGame, this);
-      this.getGames = __bind(this.getGames, this);
-      this.getGame = __bind(this.getGame, this);
-      this.gameIds = __bind(this.gameIds, this);
-      LocalAPI.__super__.constructor.call(this, this.username, this.token);
-      this.getGames(function(err, games) {
-        if (err) {
-          alert("Couldn't start API");
-          return;
-        }
-        if (!games) {
-          this.save(this.gamesKey(), {});
-          return this.save(this.gameIdsKey(), []);
-        }
-      });
-    }
-
-    LocalAPI.prototype.load = function(key) {
-      var item;
-      item = window.localStorage.getItem(key);
-      item = JSON.parse(item);
-      Serializable.deserialize(item, classmap);
-      return item;
-    };
-
-    LocalAPI.prototype.save = function(key, value) {
-      return window.localStorage.setItem(key, JSON.stringify(value));
-    };
-
-    LocalAPI.prototype.gamesKey = function() {
-      return this.username + '!!!games';
-    };
-
-    LocalAPI.prototype.gameIdsKey = function() {
-      return this.username + '!!!game_ids';
-    };
-
-    LocalAPI.prototype.gameIds = function(cb) {
-      return cb(false, this.load(this.gameIdsKey()));
-    };
-
-    LocalAPI.prototype.getGame = function(id, cb) {
-      var _this = this;
-      return this.getGames(function(err, games) {
-        if (err) return cb(err, null);
-        return cb(false, games[id]);
-      });
-    };
-
-    LocalAPI.prototype.getGames = function(cb) {
-      return cb(false, this.load(this.gamesKey()));
-    };
-
-    LocalAPI.prototype.saveGame = function(game, cb) {
-      var _this = this;
-      return async.parallel({
-        game_ids: this.gameIds,
-        games: this.getGames
-      }, function(err, data) {
-        var game_ids, games, _ref;
-        if (err) return cb(err, null);
-        game_ids = data.game_ids;
-        games = data.games;
-        if (!(_ref = game.id, __indexOf.call(game_ids, _ref) >= 0)) {
-          game_ids.push(game.id);
-          _this.save(_this.gameIdsKey(), game_ids);
-        }
-        games[game.id] = game;
-        _this.save(_this.gamesKey(), games);
-        return cb(false, true);
-      });
-    };
-
-    return LocalAPI;
-
-  })();
-
-  RemoteAPI = RemoteAPI = (function() {
-
-    __extends(RemoteAPI, API);
-
-    function RemoteAPI(host, username, token) {
-      this.host = host;
-      this.username = username;
-      this.token = token;
-      RemoteAPI.__super__.constructor.call(this, this.username, this.token);
-    }
-
-    RemoteAPI.prototype.request = function(method, params, callback) {
-      var url;
-      url = this.host + method + '?' + $.params + '&callback=?';
-      return $.getJSON(url, function(data) {
-        return callback(data);
-      });
-    };
-
-    RemoteAPI.prototype.gameIds = function(cb) {
-      var url;
-      url = this.host + '/gameIds?callback=?';
-      return $.getJSON(url, function(data) {
-        return cb(data);
-      });
-    };
-
-    RemoteAPI.prototype.getGames = function(cb) {
-      var url;
-      url = this.host + '/games?callback=?';
-      return $.getJSON(url, function(data) {
-        return cb(data);
-      });
-    };
-
-    RemoteAPI.prototype.getGame = function(id, cb) {
-      var url;
-      url = this.host + '/games/' + id + '?callback=?';
-      return $.getJSON(url, function(data) {
-        return cb(data);
-      });
-    };
-
-    RemoteAPI.prototype.saveGame = function(game, cb) {
-      var url;
-      url = this.host + '/games/save?callback=?';
-      return $.post(url, JSON.stringify(game), (function(data) {
-        return cb(data);
-      }), 'json');
-    };
-
-    return RemoteAPI;
-
-  })();
-
-  classmap = Serializable.buildClassMap(Turns.Game, Turns.Turn, Turns.Player, GameObject, GameObject2D, Explosion, State, Square, Command.Command, Command.MouseCommand, Command.JoinCommand, Command.ExplodeCommand);
-
-  exports.API = API;
-
-  exports.LocalAPI = LocalAPI;
-
-}).call(this);
-
-});
-
 require.define("/lib/async.js", function (require, module, exports, __dirname, __filename) {
 /*global setTimeout: false, console: false */
 (function () {
@@ -2758,6 +2557,212 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
     };
 
 }());
+});
+
+require.define("/api.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var API, Command, Explosion, GameObject, GameObject2D, LocalAPI, RemoteAPI, Serializable, Square, State, Turns, async, classmap;
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
+
+  Turns = require('./turns.coffee');
+
+  GameObject = require('./game_object.coffee').GameObject;
+
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
+
+  Explosion = require('./explosion.coffee').Explosion;
+
+  State = require('./state.coffee').State;
+
+  Square = require('./square.coffee').Square;
+
+  Command = require('./command.coffee');
+
+  Serializable = require('./serializable.coffee').Serializable;
+
+  async = require('./lib/async.js');
+
+  classmap = null;
+
+  API = API = (function() {
+
+    function API(username, token) {
+      this.username = username;
+      this.token = token;
+    }
+
+    API.prototype.gameIds = function(cb) {
+      return cb(false, []);
+    };
+
+    API.prototype.getGames = function(cb) {
+      return cb(false, []);
+    };
+
+    API.prototype.getGame = function(id, cb) {
+      return cb(true, null);
+    };
+
+    API.prototype.saveGame = function(game, cb) {
+      return cb(true, null);
+    };
+
+    return API;
+
+  })();
+
+  LocalAPI = LocalAPI = (function() {
+
+    __extends(LocalAPI, API);
+
+    function LocalAPI(username, token) {
+      var _this = this;
+      this.username = username;
+      this.token = token;
+      this.saveGame = __bind(this.saveGame, this);
+      this.getGames = __bind(this.getGames, this);
+      this.getGame = __bind(this.getGame, this);
+      this.gameIds = __bind(this.gameIds, this);
+      this.gameIdsKey = __bind(this.gameIdsKey, this);
+      this.gamesKey = __bind(this.gamesKey, this);
+      this.save = __bind(this.save, this);
+      this.load = __bind(this.load, this);
+      LocalAPI.__super__.constructor.call(this, this.username, this.token);
+      this.getGames(function(err, games) {
+        if (err) {
+          alert("Couldn't start API");
+          return;
+        }
+        if (!games) {
+          _this.save(_this.gamesKey(), {});
+          return _this.save(_this.gameIdsKey(), []);
+        }
+      });
+    }
+
+    LocalAPI.prototype.load = function(key) {
+      var item;
+      item = window.localStorage.getItem(key);
+      item = JSON.parse(item);
+      Serializable.deserialize(item, classmap);
+      return item;
+    };
+
+    LocalAPI.prototype.save = function(key, value) {
+      return window.localStorage.setItem(key, JSON.stringify(value));
+    };
+
+    LocalAPI.prototype.gamesKey = function() {
+      return this.username + '!!!games';
+    };
+
+    LocalAPI.prototype.gameIdsKey = function() {
+      return this.username + '!!!game_ids';
+    };
+
+    LocalAPI.prototype.gameIds = function(cb) {
+      return cb(false, this.load(this.gameIdsKey()));
+    };
+
+    LocalAPI.prototype.getGame = function(id, cb) {
+      var _this = this;
+      return this.getGames(function(err, games) {
+        if (err) return cb(err, null);
+        return cb(false, games[id]);
+      });
+    };
+
+    LocalAPI.prototype.getGames = function(cb) {
+      return cb(false, this.load(this.gamesKey()));
+    };
+
+    LocalAPI.prototype.saveGame = function(game, cb) {
+      var _this = this;
+      return async.parallel({
+        game_ids: this.gameIds,
+        games: this.getGames
+      }, function(err, data) {
+        var game_ids, games, _ref;
+        if (err) return cb(err, null);
+        game_ids = data.game_ids;
+        games = data.games;
+        if (!(_ref = game.id, __indexOf.call(game_ids, _ref) >= 0)) {
+          game_ids.push(game.id);
+          _this.save(_this.gameIdsKey(), game_ids);
+        }
+        games[game.id] = game;
+        _this.save(_this.gamesKey(), games);
+        return cb(false, true);
+      });
+    };
+
+    return LocalAPI;
+
+  })();
+
+  RemoteAPI = RemoteAPI = (function() {
+
+    __extends(RemoteAPI, API);
+
+    function RemoteAPI(host, username, token) {
+      this.host = host;
+      this.username = username;
+      this.token = token;
+      RemoteAPI.__super__.constructor.call(this, this.username, this.token);
+    }
+
+    RemoteAPI.prototype.request = function(method, params, callback) {
+      var url;
+      url = this.host + method + '?' + $.params + '&callback=?';
+      return $.getJSON(url, function(data) {
+        return callback(data);
+      });
+    };
+
+    RemoteAPI.prototype.gameIds = function(cb) {
+      var url;
+      url = this.host + '/gameIds?callback=?';
+      return $.getJSON(url, function(data) {
+        return cb(data);
+      });
+    };
+
+    RemoteAPI.prototype.getGames = function(cb) {
+      var url;
+      url = this.host + '/games?callback=?';
+      return $.getJSON(url, function(data) {
+        return cb(data);
+      });
+    };
+
+    RemoteAPI.prototype.getGame = function(id, cb) {
+      var url;
+      url = this.host + '/games/' + id + '?callback=?';
+      return $.getJSON(url, function(data) {
+        return cb(data);
+      });
+    };
+
+    RemoteAPI.prototype.saveGame = function(game, cb) {
+      var url;
+      url = this.host + '/games/save?callback=?';
+      return $.post(url, JSON.stringify(game), (function(data) {
+        return cb(data);
+      }), 'json');
+    };
+
+    return RemoteAPI;
+
+  })();
+
+  classmap = Serializable.buildClassMap(Turns.Game, Turns.Turn, Turns.Player, GameObject, GameObject2D, Explosion, State, Square, Command.Command, Command.MouseCommand, Command.JoinCommand, Command.ExplodeCommand);
+
+  exports.API = API;
+
+  exports.LocalAPI = LocalAPI;
+
+}).call(this);
+
 });
 
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {

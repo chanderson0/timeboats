@@ -30,7 +30,7 @@ API = class API
 LocalAPI = class LocalAPI extends API
   constructor: (@username, @token) ->
     super @username, @token
-    @getGames (err, games) ->
+    @getGames (err, games) =>
       if err
         alert "Couldn't start API"
         return
@@ -39,19 +39,19 @@ LocalAPI = class LocalAPI extends API
         @save @gamesKey(), {}
         @save @gameIdsKey(), []
 
-  load: (key) ->
+  load: (key) =>
     item = window.localStorage.getItem key
     item = JSON.parse item
     Serializable.deserialize item, classmap
     item
 
-  save: (key, value) ->
+  save: (key, value) =>
     window.localStorage.setItem key, JSON.stringify(value)
 
-  gamesKey: ->
+  gamesKey: =>
     @username + '!!!games'
 
-  gameIdsKey: ->
+  gameIdsKey: =>
     @username + '!!!game_ids'
 
   gameIds: (cb) =>
