@@ -910,10 +910,10 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       if (options == null) options = {};
       if (this.isInitialized) {
         context.save();
-        startX = Math.floor(options.region.x / Map.CELL_SIZE_PX);
-        startY = Math.floor(options.region.y / Map.CELL_SIZE_PX);
-        endX = startX + Math.ceil(options.region.width / Map.CELL_SIZE_PX);
-        endY = startY + Math.ceil(options.region.height / Map.CELL_SIZE_PX);
+        startX = Math.max(0, Math.floor(options.region.x / Map.CELL_SIZE_PX));
+        startY = Math.max(0, Math.floor(options.region.y / Map.CELL_SIZE_PX));
+        endX = Math.min(startX + Math.ceil(options.region.width / Map.CELL_SIZE_PX), this.width - 1);
+        endY = Math.min(startY + Math.ceil(options.region.height / Map.CELL_SIZE_PX), this.width - 1);
         for (x = startX; startX <= endX ? x <= endX : x >= endX; startX <= endX ? x++ : x--) {
           for (y = startY; startY <= endY ? y <= endY : y >= endY; startY <= endY ? y++ : y--) {
             cellX = x * Map.CELL_SIZE_PX;
@@ -2932,8 +2932,6 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
             alert("couldn't load game " + id);
             return;
           }
-          console.log("loaded game");
-          console.log(window.document);
           console.log(game_ids[0], games, game);
           timeboats = new Timeboats(game, context, canvas.width, canvas.height, api, window.document);
           timeboats.turnClicked(null);

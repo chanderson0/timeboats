@@ -85,10 +85,10 @@ exports.Map = class Map extends GameObject
     if @isInitialized
       context.save()
     
-      startX = Math.floor(options.region.x / Map.CELL_SIZE_PX)
-      startY = Math.floor(options.region.y / Map.CELL_SIZE_PX)
-      endX   = startX + Math.ceil(options.region.width / Map.CELL_SIZE_PX)
-      endY   = startY + Math.ceil(options.region.height / Map.CELL_SIZE_PX)
+      startX = Math.max(0, Math.floor(options.region.x / Map.CELL_SIZE_PX))
+      startY = Math.max(0, Math.floor(options.region.y / Map.CELL_SIZE_PX))
+      endX   = Math.min(startX + Math.ceil(options.region.width / Map.CELL_SIZE_PX), @width-1)
+      endY   = Math.min(startY + Math.ceil(options.region.height / Map.CELL_SIZE_PX), @width-1)
 
       for x in [startX..endX]
         for y in [startY..endY]
