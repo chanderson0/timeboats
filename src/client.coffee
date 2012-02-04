@@ -37,7 +37,7 @@ window.onload = ->
         alert "couldn't load game " + id
         return
 
-      timeboats = new Timeboats game, context, canvas.width, canvas.height, api
+      timeboats = new Timeboats game, context, canvas.width, canvas.height, api, window.document
       timeboats.turnClicked null
       render = true
   
@@ -59,7 +59,7 @@ window.onload = ->
           return
         
         console.log game_ids[0], games, game
-        timeboats = new Timeboats game, context, canvas.width, canvas.height, api
+        timeboats = new Timeboats game, context, canvas.width, canvas.height, api, window.document
         timeboats.turnClicked null
         console.log game, timeboats
         render = true
@@ -74,7 +74,7 @@ window.onload = ->
     $("#playbutton").prop "disabled", true
     
     game = new Turns.Game UUID.generate(), players, order
-    timeboats = new Timeboats game, context, canvas.width, canvas.height, api
+    timeboats = new Timeboats game, context, canvas.width, canvas.height, api, window.document
     timeboats.turnClicked null
     render = true
 

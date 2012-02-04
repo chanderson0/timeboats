@@ -5,7 +5,7 @@ Point = require('./point.coffee').Point
 Map = require('./map.coffee').Map
 
 exports.Timeboats = class Timeboats
-  constructor: (@game, @context, @width, @height, @api = null) ->
+  constructor: (@game, @context, @width, @height, @api = null, @document = null) ->
     @timestep = 1 / 60
     @renderstep = 1 / 60
 
@@ -19,9 +19,18 @@ exports.Timeboats = class Timeboats
     if not @game.mapSeed?
       @game.setMap new Date().getTime()
     
-    Map.getInstance().generate width / Map.CELL_SIZE_PX,
-      height / Map.CELL_SIZE_PX,
+    Map.getInstance().generate @width / Map.CELL_SIZE_PX,
+      @height / Map.CELL_SIZE_PX,
       @game.mapSeed
+
+    @full_redraw = false
+    if @document?
+      @m_canvas = @document.createElement 'canvas'
+      @m_canvas.width = @width
+      @m_canvas.height = @height
+      @m_context = @m_canvas.getContext '2d'
+    else
+      @m_canvas = null
 
     @game.render()
 
@@ -66,6 +75,7 @@ exports.Timeboats = class Timeboats
       @gamestate = "paused"
 
       @setFrameNum(0)
+      @full_redraw = true
 
       if @game.turns.length > 0
         $("#playbutton").html "Play"
@@ -78,6 +88,8 @@ exports.Timeboats = class Timeboats
       @game.nextTurn()
 
       @setFrameNum(0)
+      @full_redraw = true
+
       if @api?
         @api.saveGame @game, (err, worked) ->
           if err or not worked
@@ -146,9 +158,11 @@ exports.Timeboats = class Timeboats
       @frame_history = [@frame_history[@frame_num]]
 
       @updateState "paused", "rerecording"
+      @full_redraw = true
 
   sliderDrag: (value) ->
     if @gamestate == "paused"
+      @full_redraw = true
       @setFrameNum(parseInt(value), false)
 
   addCommand: (buffer, command) ->
@@ -199,9 +213,16 @@ exports.Timeboats = class Timeboats
       @state = @frame_history[@frame_num]
 
   draw: ->
-    @context.clearRect 0, 0, @width + 1, @height + 1
-    Map.getInstance().draw @context
-    @frame_history[@frame_num].draw @context, active: @game.next_turn_id
+    if not @m_canvas?
+      @context.clearRect 0, 0, @width + 1, @height + 1
+      Map.getInstance().draw @context
+      @frame_history[@frame_num].draw @context, active: @game.next_turn_id
+    else
+      Map.getInstance().draw @m_context, full_redraw: @full_redraw
+      @full_redraw = false
+
+      @frame_history[@frame_num].draw @m_context, active: @game.next_turn_id
+      @context.drawImage @m_canvas, 0, 0
 
   onMouseDown: (e) =>
     if @gamestate == "recording"

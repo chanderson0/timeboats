@@ -6,8 +6,19 @@ exports.MapCell = class MapCell extends GameObject
   constructor: (@altitude) ->
     @isPlant = false
     @excitement = 0
-    @.saveInitialState()
+    @saveInitialState()
+    @r = 0
+    @g = 0
+    @b = 0
     super
+
+  setColor: (r, g, b) ->
+    @r = r
+    @g = g
+    @b = b
+
+  getColor: ->
+    [@r, @g, @b]
 
   clone: ->
     new MapCell(@altitude)

@@ -38,36 +38,67 @@ exports.Map = class Map extends GameObject
       if @isInitialized
         for x in [0..@width - 1]
           for y in [0..@height - 1]
+            [o_r, o_g, o_b] = @cells[x][y].getColor()
+
             @cells[x][y].excitement *= 0.9
             if (@random.nextf() > 0.97)
               @cells[x][y].excitement += -0.3 + @random.nextf() * 0.6
 
-  draw: (context) ->
+            b = Math.floor(40 + @cells[x][y].altitude * 10)
+            r = Math.floor(b * 0.9)
+            g = r
+            if @cells[x][y].altitude < @waterLevel
+              alpha = 0.5 + @cells[x][y].excitement * 0.2
+              landAlpha = 1 / (1 + alpha)
+              waterAlpha = alpha / (1 + alpha)
+              r = Math.floor(r * landAlpha + 60.0 * waterAlpha)
+              g = Math.floor(g * landAlpha + 110.0 * waterAlpha)
+              b = Math.floor(b * landAlpha + 150.0 * waterAlpha)
+
+            if @cells[x][y].isPlant
+              r = Math.floor(r * 0.2 + 72 * 0.8)
+              g = Math.floor(g * 0.2 + 105 * 0.8)
+              b = Math.floor(b * 0.2 + 87 * 0.8)
+
+            if r != o_r or g != o_g or b != o_b
+              @cells[x][y].dirty = true
+              @cells[x][y].setColor r, g, b
+
+  draw: (context, options = {}) ->
     if @isInitialized
       context.save()
       for x in [0..@width - 1]
         for y in [0..@height - 1]
+          if options.full_redraw or @cells[x][y].dirty
+            @cells[x][y].dirty = false
+
+            cellX = x * Map.CELL_SIZE_PX
+            cellY = y * Map.CELL_SIZE_PX
+
+            [r, g, b] = @cells[x][y].getColor()
+
+            context.fillStyle = "rgba(#{r}, #{g}, #{b}, 1)"
+            context.fillRect cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
+      context.restore()
+
+  drawRegion: (context, options = {}) ->
+    if @isInitialized
+      context.save()
+    
+      startX = Math.floor(options.region.x / Map.CELL_SIZE_PX)
+      startY = Math.floor(options.region.y / Map.CELL_SIZE_PX)
+      endX   = startX + Math.ceil(options.region.width / Map.CELL_SIZE_PX)
+      endY   = startY + Math.ceil(options.region.height / Map.CELL_SIZE_PX)
+
+      for x in [startX..endX]
+        for y in [startY..endY]
           cellX = x * Map.CELL_SIZE_PX
           cellY = y * Map.CELL_SIZE_PX
 
-          b = Math.floor(40 + @cells[x][y].altitude * 10)
-          r = Math.floor(b * 0.9)
-          g = r
-          if @cells[x][y].altitude < @waterLevel
-            alpha = 0.5 + @cells[x][y].excitement * 0.2
-            landAlpha = 1 / (1 + alpha)
-            waterAlpha = alpha / (1 + alpha)
-            r = Math.floor(r * landAlpha + 60.0 * waterAlpha)
-            g = Math.floor(g * landAlpha + 110.0 * waterAlpha)
-            b = Math.floor(b * landAlpha + 150.0 * waterAlpha)
-
-          if @cells[x][y].isPlant
-            r = Math.floor(r * 0.2 + 72 * 0.8)
-            g = Math.floor(g * 0.2 + 105 * 0.8)
-            b = Math.floor(b * 0.2 + 87 * 0.8)
+          [r, g, b] = @cells[x][y].getColor()
 
           context.fillStyle = "rgba(#{r}, #{g}, #{b}, 1)"
-          context.fillRect cellX, cellY, cellX + Map.CELL_SIZE_PX, cellY + Map.CELL_SIZE_PX
+          context.fillRect cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
       context.restore()
 
   # collision methods

@@ -357,12 +357,13 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 
   exports.Timeboats = Timeboats = (function() {
 
-    function Timeboats(game, context, width, height, api) {
+    function Timeboats(game, context, width, height, api, document) {
       this.game = game;
       this.context = context;
       this.width = width;
       this.height = height;
       this.api = api != null ? api : null;
+      this.document = document != null ? document : null;
       this.onMouseMove = __bind(this.onMouseMove, this);
       this.onMouseDown = __bind(this.onMouseDown, this);
       this.timestep = 1 / 60;
@@ -373,7 +374,16 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.setFrameNum(0);
       this.active_commands = [];
       if (!(this.game.mapSeed != null)) this.game.setMap(new Date().getTime());
-      Map.getInstance().generate(width / Map.CELL_SIZE_PX, height / Map.CELL_SIZE_PX, this.game.mapSeed);
+      Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, this.game.mapSeed);
+      this.full_redraw = false;
+      if (this.document != null) {
+        this.m_canvas = this.document.createElement('canvas');
+        this.m_canvas.width = this.width;
+        this.m_canvas.height = this.height;
+        this.m_context = this.m_canvas.getContext('2d');
+      } else {
+        this.m_canvas = null;
+      }
       this.game.render();
     }
 
@@ -415,6 +425,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       } else if (oldState === "rerecording" && newState === "paused") {
         this.gamestate = "paused";
         this.setFrameNum(0);
+        this.full_redraw = true;
         if (this.game.turns.length > 0) {
           $("#playbutton").html("Play");
           $("#playbutton").prop("disabled", false);
@@ -426,6 +437,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.active_commands = [];
         this.game.nextTurn();
         this.setFrameNum(0);
+        this.full_redraw = true;
         if (this.api != null) {
           this.api.saveGame(this.game, function(err, worked) {
             if (err || !worked) return alert("Couldn't save game");
@@ -487,12 +499,14 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.command_history = this.game.computeCommands();
         this.setFrameNum(0);
         this.frame_history = [this.frame_history[this.frame_num]];
-        return this.updateState("paused", "rerecording");
+        this.updateState("paused", "rerecording");
+        return this.full_redraw = true;
       }
     };
 
     Timeboats.prototype.sliderDrag = function(value) {
       if (this.gamestate === "paused") {
+        this.full_redraw = true;
         return this.setFrameNum(parseInt(value), false);
       }
     };
@@ -546,11 +560,22 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.draw = function() {
-      this.context.clearRect(0, 0, this.width + 1, this.height + 1);
-      Map.getInstance().draw(this.context);
-      return this.frame_history[this.frame_num].draw(this.context, {
-        active: this.game.next_turn_id
-      });
+      if (!(this.m_canvas != null)) {
+        this.context.clearRect(0, 0, this.width + 1, this.height + 1);
+        Map.getInstance().draw(this.context);
+        return this.frame_history[this.frame_num].draw(this.context, {
+          active: this.game.next_turn_id
+        });
+      } else {
+        Map.getInstance().draw(this.m_context, {
+          full_redraw: this.full_redraw
+        });
+        this.full_redraw = false;
+        this.frame_history[this.frame_num].draw(this.m_context, {
+          active: this.game.next_turn_id
+        });
+        return this.context.drawImage(this.m_canvas, 0, 0);
+      }
     };
 
     Timeboats.prototype.onMouseDown = function(e) {
@@ -581,10 +606,12 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 
 require.define("/state.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Serializable, State;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Map, Serializable, State;
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   Serializable = require('./serializable.coffee').Serializable;
+
+  Map = require('./map.coffee').Map;
 
   exports.State = State = (function() {
 
@@ -593,8 +620,10 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
     State.prototype.__type = 'State';
 
     function State() {
-      this.objects = {};
+      this.draw = __bind(this.draw, this);
+      this.removeObject = __bind(this.removeObject, this);      this.objects = {};
       this.commands = [];
+      this.full_redraw = false;
     }
 
     State.prototype.clone = function() {
@@ -622,9 +651,10 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
 
     State.prototype.removeObject = function(id) {
       var _this = this;
-      return this.objects[id].leave(function() {
+      this.objects[id].leave(function() {
         return delete _this.objects[id];
       });
+      return this.full_redraw = true;
     };
 
     State.prototype.update = function(dt) {
@@ -647,10 +677,29 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
     };
 
     State.prototype.draw = function(context, options) {
-      var id, object, _ref;
-      _ref = this.objects;
-      for (id in _ref) {
-        object = _ref[id];
+      var id, object, region, _ref, _ref2;
+      if (this.full_redraw) {
+        Map.getInstance().draw(context, {
+          full_redraw: true
+        });
+      } else {
+        _ref = this.objects;
+        for (id in _ref) {
+          object = _ref[id];
+          region = {
+            x: object.x - object.radius * 2,
+            y: object.y - object.radius * 2,
+            width: object.radius * 4,
+            height: object.radius * 4
+          };
+          Map.getInstance().drawRegion(context, {
+            region: region
+          });
+        }
+      }
+      _ref2 = this.objects;
+      for (id in _ref2) {
+        object = _ref2[id];
         object.draw(context, {
           dim: options.active !== id
         });
@@ -739,322 +788,6 @@ require.define("/serializable.coffee", function (require, module, exports, __dir
 
 });
 
-require.define("/square.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
-  var Explosion, GameObject2D, Map, Point, Square;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
-
-  Point = require('./point.coffee').Point;
-
-  Explosion = require('./explosion.coffee').Explosion;
-
-  Map = require('./map.coffee').Map;
-
-  exports.Square = Square = (function() {
-
-    __extends(Square, GameObject2D);
-
-    Square.prototype.__type = 'Square';
-
-    function Square(id, x, y, size, fill) {
-      this.id = id;
-      this.x = x;
-      this.y = y;
-      this.size = size;
-      this.fill = fill != null ? fill : "white";
-      Square.__super__.constructor.call(this, this.id, this.x, this.y);
-      this.destx = this.x;
-      this.desty = this.y;
-      this.radius = this.size / 2;
-    }
-
-    Square.prototype.clone = function() {
-      var sq;
-      sq = new Square(this.id, this.x, this.y, this.size, this.fill);
-      sq.rotation = this.rotation;
-      sq.vx = this.vx;
-      sq.vy = this.vy;
-      sq.destx = this.destx;
-      sq.desty = this.desty;
-      return sq;
-    };
-
-    Square.prototype.explode = function(state) {
-      var explosion, id;
-      id = Math.floor(Math.random() * 1000000);
-      explosion = new Explosion(id, this.x, this.y, 50);
-      state.addObject(id, explosion);
-      return state.removeObject(this.id);
-    };
-
-    Square.prototype.update = function(dt, state) {
-      var dir, dist, to_move;
-      dir = Point.subtract(this.destx, this.desty, this.x, this.y);
-      dist = Point.getLength(dir.x, dir.y);
-      to_move = Point.normalize(dir.x, dir.y, Math.sqrt(dist) * dt * 1000);
-      if (dist < 0.5) {
-        to_move = {
-          x: 0,
-          y: 0
-        };
-        this.setPos(this.destx, this.desty);
-      }
-      this.setVel(to_move.x, to_move.y);
-      Map.getInstance().collideWith(this, state, true);
-      return Square.__super__.update.call(this, dt, state);
-    };
-
-    Square.prototype.draw = function(context, options) {
-      context.save();
-      if ((options != null) && options.dim) context.globalAlpha = 0.5;
-      context.fillStyle = this.fill;
-      context.translate(this.x, this.y);
-      context.rotate(this.rotation);
-      context.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
-      return context.restore();
-    };
-
-    Square.prototype.collide = function(state) {
-      return this.explode(state);
-    };
-
-    return Square;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/game_object_2d.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
-  var GameObject, GameObject2D, Point;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  GameObject = require('./game_object.coffee').GameObject;
-
-  Point = require('./point.coffee').Point;
-
-  exports.GameObject2D = GameObject2D = (function() {
-
-    __extends(GameObject2D, GameObject);
-
-    GameObject2D.prototype.__type = 'GameObject2D';
-
-    function GameObject2D(id, x, y, vx, vy, rotation, radius) {
-      this.id = id;
-      this.x = x != null ? x : 0;
-      this.y = y != null ? y : 0;
-      this.vx = vx != null ? vx : 0;
-      this.vy = vy != null ? vy : 0;
-      this.rotation = rotation != null ? rotation : 0;
-      this.radius = radius != null ? radius : 0;
-      GameObject2D.__super__.constructor.call(this, this.id);
-    }
-
-    GameObject2D.prototype.clone = function() {
-      return new GameObject2D(this.id, this.x, this.y, this.vx, this.vy, this.rotation, this.radius);
-    };
-
-    GameObject2D.prototype.setPos = function(x, y) {
-      this.x = x;
-      return this.y = y;
-    };
-
-    GameObject2D.prototype.setVel = function(vx, vy) {
-      this.vx = vx;
-      this.vy = vy;
-      if (this.vx !== 0 || this.vy !== 0) {
-        return this.rotation = Point.getAngle(this.vx, this.vy);
-      }
-    };
-
-    GameObject2D.prototype.update = function(dt) {
-      var newPos;
-      newPos = Point.add(this.x, this.y, this.vx * dt, this.vy * dt);
-      return this.setPos(newPos.x, newPos.y);
-    };
-
-    GameObject2D.prototype.collide = function(state) {
-      this.vx = 0;
-      return this.vy = 0;
-    };
-
-    return GameObject2D;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/game_object.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
-  var GameObject, Serializable;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  Serializable = require('./serializable.coffee').Serializable;
-
-  exports.GameObject = GameObject = (function() {
-
-    __extends(GameObject, Serializable);
-
-    GameObject.prototype.__type = 'GameObject';
-
-    function GameObject(id) {
-      this.id = id;
-      GameObject.__super__.constructor.apply(this, arguments);
-    }
-
-    GameObject.prototype.clone = function() {
-      return new GameObject(this.id);
-    };
-
-    GameObject.prototype.draw = function(context) {};
-
-    GameObject.prototype.update = function(dt, state) {};
-
-    GameObject.prototype.leave = function(callback) {
-      return callback();
-    };
-
-    return GameObject;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/point.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
-  var Point;
-
-  exports.Point = Point = (function() {
-
-    function Point() {}
-
-    Point.getAngleDeg = function(x, y) {
-      return this.getAngle(x, y) * 180 / Math.PI;
-    };
-
-    Point.getAngle = function(x, y) {
-      return Math.atan2(y, x);
-    };
-
-    Point.add = function(x1, y1, x2, y2) {
-      return {
-        x: x1 + x2,
-        y: y1 + y2
-      };
-    };
-
-    Point.subtract = function(x1, y1, x2, y2) {
-      return {
-        x: x1 - x2,
-        y: y1 - y2
-      };
-    };
-
-    Point.getDistance = function(x1, y1, x2, y2) {
-      var x, y;
-      x = x1 - x2;
-      y = y1 - y2;
-      return Math.sqrt(x * x + y * y);
-    };
-
-    Point.getLength = function(x, y) {
-      return Math.sqrt(x * x + y * y);
-    };
-
-    Point.normalize = function(x, y, length) {
-      var current, scale;
-      if (length == null) length = 1;
-      current = this.getLength(x, y);
-      scale = current !== 0 ? length / current : 0;
-      return {
-        x: x * scale,
-        y: y * scale
-      };
-    };
-
-    return Point;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/explosion.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
-  var Explosion, GameObject, Map, Point;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  GameObject = require('./game_object.coffee').GameObject;
-
-  Point = require('./point.coffee').Point;
-
-  Map = require('./map.coffee').Map;
-
-  exports.Explosion = Explosion = (function() {
-
-    __extends(Explosion, GameObject);
-
-    Explosion.prototype.__type = 'Explosion';
-
-    function Explosion(id, x, y, max_radius) {
-      this.id = id;
-      this.x = x;
-      this.y = y;
-      this.max_radius = max_radius;
-      Explosion.__super__.constructor.call(this, this.id, this.x, this.y);
-      this.radius = 0;
-      Map.getInstance().damageAt(this.x, this.y, this.max_radius);
-    }
-
-    Explosion.prototype.clone = function() {
-      var exp;
-      exp = new Explosion(this.id, this.x, this.y, this.max_radius);
-      exp.radius = this.radius;
-      return exp;
-    };
-
-    Explosion.prototype.update = function(dt, state) {
-      var id, object, _ref;
-      this.radius += dt * 100;
-      _ref = state.objects;
-      for (id in _ref) {
-        object = _ref[id];
-        if (object.__type === 'Square' && Point.getDistance(this.x, this.y, object.x, object.y) < this.radius) {
-          object.explode(state);
-        }
-      }
-      Explosion.__super__.update.call(this, dt, state);
-      if (this.radius >= this.max_radius) return state.removeObject(this.id);
-    };
-
-    Explosion.prototype.draw = function(context) {
-      context.save();
-      context.translate(this.x, this.y);
-      context.strokeStyle = "white";
-      context.beginPath();
-      context.arc(0, 0, this.radius, 0, Math.PI * 2, true);
-      context.closePath();
-      context.stroke();
-      return context.restore();
-    };
-
-    return Explosion;
-
-  })();
-
-}).call(this);
-
-});
-
 require.define("/map.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
   var GameObject, Gaussian, Map, MapCell, Point, Random;
@@ -1104,7 +837,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.update = function(dt) {
-      var x, y, _ref, _results;
+      var alpha, b, g, landAlpha, o_b, o_g, o_r, r, waterAlpha, x, y, _ref, _results;
       this.waterDt += dt;
       if (this.waterDt >= 1 / 10) {
         this.waterDt = 0;
@@ -1112,12 +845,33 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
           _results = [];
           for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
             _results.push((function() {
-              var _ref2, _results2;
+              var _ref2, _ref3, _results2;
               _results2 = [];
               for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
+                _ref3 = this.cells[x][y].getColor(), o_r = _ref3[0], o_g = _ref3[1], o_b = _ref3[2];
                 this.cells[x][y].excitement *= 0.9;
                 if (this.random.nextf() > 0.97) {
-                  _results2.push(this.cells[x][y].excitement += -0.3 + this.random.nextf() * 0.6);
+                  this.cells[x][y].excitement += -0.3 + this.random.nextf() * 0.6;
+                }
+                b = Math.floor(40 + this.cells[x][y].altitude * 10);
+                r = Math.floor(b * 0.9);
+                g = r;
+                if (this.cells[x][y].altitude < this.waterLevel) {
+                  alpha = 0.5 + this.cells[x][y].excitement * 0.2;
+                  landAlpha = 1 / (1 + alpha);
+                  waterAlpha = alpha / (1 + alpha);
+                  r = Math.floor(r * landAlpha + 60.0 * waterAlpha);
+                  g = Math.floor(g * landAlpha + 110.0 * waterAlpha);
+                  b = Math.floor(b * landAlpha + 150.0 * waterAlpha);
+                }
+                if (this.cells[x][y].isPlant) {
+                  r = Math.floor(r * 0.2 + 72 * 0.8);
+                  g = Math.floor(g * 0.2 + 105 * 0.8);
+                  b = Math.floor(b * 0.2 + 87 * 0.8);
+                }
+                if (r !== o_r || g !== o_g || b !== o_b) {
+                  this.cells[x][y].dirty = true;
+                  _results2.push(this.cells[x][y].setColor(r, g, b));
                 } else {
                   _results2.push(void 0);
                 }
@@ -1130,32 +884,43 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       }
     };
 
-    Map.prototype.draw = function(context) {
-      var alpha, b, cellX, cellY, g, landAlpha, r, waterAlpha, x, y, _ref, _ref2;
+    Map.prototype.draw = function(context, options) {
+      var b, cellX, cellY, g, r, x, y, _ref, _ref2, _ref3;
+      if (options == null) options = {};
       if (this.isInitialized) {
         context.save();
         for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
           for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
+            if (options.full_redraw || this.cells[x][y].dirty) {
+              this.cells[x][y].dirty = false;
+              cellX = x * Map.CELL_SIZE_PX;
+              cellY = y * Map.CELL_SIZE_PX;
+              _ref3 = this.cells[x][y].getColor(), r = _ref3[0], g = _ref3[1], b = _ref3[2];
+              context.fillStyle = "rgba(" + r + ", " + g + ", " + b + ", 1)";
+              context.fillRect(cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
+            }
+          }
+        }
+        return context.restore();
+      }
+    };
+
+    Map.prototype.drawRegion = function(context, options) {
+      var b, cellX, cellY, endX, endY, g, r, startX, startY, x, y, _ref;
+      if (options == null) options = {};
+      if (this.isInitialized) {
+        context.save();
+        startX = Math.floor(options.region.x / Map.CELL_SIZE_PX);
+        startY = Math.floor(options.region.y / Map.CELL_SIZE_PX);
+        endX = startX + Math.ceil(options.region.width / Map.CELL_SIZE_PX);
+        endY = startY + Math.ceil(options.region.height / Map.CELL_SIZE_PX);
+        for (x = startX; startX <= endX ? x <= endX : x >= endX; startX <= endX ? x++ : x--) {
+          for (y = startY; startY <= endY ? y <= endY : y >= endY; startY <= endY ? y++ : y--) {
             cellX = x * Map.CELL_SIZE_PX;
             cellY = y * Map.CELL_SIZE_PX;
-            b = Math.floor(40 + this.cells[x][y].altitude * 10);
-            r = Math.floor(b * 0.9);
-            g = r;
-            if (this.cells[x][y].altitude < this.waterLevel) {
-              alpha = 0.5 + this.cells[x][y].excitement * 0.2;
-              landAlpha = 1 / (1 + alpha);
-              waterAlpha = alpha / (1 + alpha);
-              r = Math.floor(r * landAlpha + 60.0 * waterAlpha);
-              g = Math.floor(g * landAlpha + 110.0 * waterAlpha);
-              b = Math.floor(b * landAlpha + 150.0 * waterAlpha);
-            }
-            if (this.cells[x][y].isPlant) {
-              r = Math.floor(r * 0.2 + 72 * 0.8);
-              g = Math.floor(g * 0.2 + 105 * 0.8);
-              b = Math.floor(b * 0.2 + 87 * 0.8);
-            }
+            _ref = this.cells[x][y].getColor(), r = _ref[0], g = _ref[1], b = _ref[2];
             context.fillStyle = "rgba(" + r + ", " + g + ", " + b + ", 1)";
-            context.fillRect(cellX, cellY, cellX + Map.CELL_SIZE_PX, cellY + Map.CELL_SIZE_PX);
+            context.fillRect(cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
           }
         }
         return context.restore();
@@ -1385,6 +1150,44 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
 
 });
 
+require.define("/game_object.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var GameObject, Serializable;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Serializable = require('./serializable.coffee').Serializable;
+
+  exports.GameObject = GameObject = (function() {
+
+    __extends(GameObject, Serializable);
+
+    GameObject.prototype.__type = 'GameObject';
+
+    function GameObject(id) {
+      this.id = id;
+      GameObject.__super__.constructor.apply(this, arguments);
+    }
+
+    GameObject.prototype.clone = function() {
+      return new GameObject(this.id);
+    };
+
+    GameObject.prototype.draw = function(context) {};
+
+    GameObject.prototype.update = function(dt, state) {};
+
+    GameObject.prototype.leave = function(callback) {
+      return callback();
+    };
+
+    return GameObject;
+
+  })();
+
+}).call(this);
+
+});
+
 require.define("/map_cell.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
   var GameObject, MapCell;
@@ -1403,8 +1206,21 @@ require.define("/map_cell.coffee", function (require, module, exports, __dirname
       this.isPlant = false;
       this.excitement = 0;
       this.saveInitialState();
+      this.r = 0;
+      this.g = 0;
+      this.b = 0;
       MapCell.__super__.constructor.apply(this, arguments);
     }
+
+    MapCell.prototype.setColor = function(r, g, b) {
+      this.r = r;
+      this.g = g;
+      return this.b = b;
+    };
+
+    MapCell.prototype.getColor = function() {
+      return [this.r, this.g, this.b];
+    };
 
     MapCell.prototype.clone = function() {
       return new MapCell(this.altitude);
@@ -1510,6 +1326,284 @@ require.define("/gaussian.coffee", function (require, module, exports, __dirname
     };
 
     return Gaussian;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/point.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var Point;
+
+  exports.Point = Point = (function() {
+
+    function Point() {}
+
+    Point.getAngleDeg = function(x, y) {
+      return this.getAngle(x, y) * 180 / Math.PI;
+    };
+
+    Point.getAngle = function(x, y) {
+      return Math.atan2(y, x);
+    };
+
+    Point.add = function(x1, y1, x2, y2) {
+      return {
+        x: x1 + x2,
+        y: y1 + y2
+      };
+    };
+
+    Point.subtract = function(x1, y1, x2, y2) {
+      return {
+        x: x1 - x2,
+        y: y1 - y2
+      };
+    };
+
+    Point.getDistance = function(x1, y1, x2, y2) {
+      var x, y;
+      x = x1 - x2;
+      y = y1 - y2;
+      return Math.sqrt(x * x + y * y);
+    };
+
+    Point.getLength = function(x, y) {
+      return Math.sqrt(x * x + y * y);
+    };
+
+    Point.normalize = function(x, y, length) {
+      var current, scale;
+      if (length == null) length = 1;
+      current = this.getLength(x, y);
+      scale = current !== 0 ? length / current : 0;
+      return {
+        x: x * scale,
+        y: y * scale
+      };
+    };
+
+    return Point;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/square.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var Explosion, GameObject2D, Map, Point, Square;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
+
+  Point = require('./point.coffee').Point;
+
+  Explosion = require('./explosion.coffee').Explosion;
+
+  Map = require('./map.coffee').Map;
+
+  exports.Square = Square = (function() {
+
+    __extends(Square, GameObject2D);
+
+    Square.prototype.__type = 'Square';
+
+    function Square(id, x, y, size, fill) {
+      this.id = id;
+      this.x = x;
+      this.y = y;
+      this.size = size;
+      this.fill = fill != null ? fill : "white";
+      Square.__super__.constructor.call(this, this.id, this.x, this.y);
+      this.destx = this.x;
+      this.desty = this.y;
+      this.radius = this.size / 2;
+    }
+
+    Square.prototype.clone = function() {
+      var sq;
+      sq = new Square(this.id, this.x, this.y, this.size, this.fill);
+      sq.rotation = this.rotation;
+      sq.vx = this.vx;
+      sq.vy = this.vy;
+      sq.destx = this.destx;
+      sq.desty = this.desty;
+      return sq;
+    };
+
+    Square.prototype.explode = function(state) {
+      var explosion, id;
+      id = Math.floor(Math.random() * 1000000);
+      explosion = new Explosion(id, this.x, this.y, 50);
+      state.addObject(id, explosion);
+      return state.removeObject(this.id);
+    };
+
+    Square.prototype.update = function(dt, state) {
+      var dir, dist, to_move;
+      dir = Point.subtract(this.destx, this.desty, this.x, this.y);
+      dist = Point.getLength(dir.x, dir.y);
+      to_move = Point.normalize(dir.x, dir.y, Math.sqrt(dist) * dt * 1000);
+      if (dist < 0.5) {
+        to_move = {
+          x: 0,
+          y: 0
+        };
+        this.setPos(this.destx, this.desty);
+      }
+      this.setVel(to_move.x, to_move.y);
+      Map.getInstance().collideWith(this, state, true);
+      return Square.__super__.update.call(this, dt, state);
+    };
+
+    Square.prototype.draw = function(context, options) {
+      context.save();
+      if ((options != null) && options.dim) context.globalAlpha = 0.5;
+      context.fillStyle = this.fill;
+      context.translate(this.x, this.y);
+      context.rotate(this.rotation);
+      context.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+      return context.restore();
+    };
+
+    Square.prototype.collide = function(state) {
+      return this.explode(state);
+    };
+
+    return Square;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/game_object_2d.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var GameObject, GameObject2D, Point;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject = require('./game_object.coffee').GameObject;
+
+  Point = require('./point.coffee').Point;
+
+  exports.GameObject2D = GameObject2D = (function() {
+
+    __extends(GameObject2D, GameObject);
+
+    GameObject2D.prototype.__type = 'GameObject2D';
+
+    function GameObject2D(id, x, y, vx, vy, rotation, radius) {
+      this.id = id;
+      this.x = x != null ? x : 0;
+      this.y = y != null ? y : 0;
+      this.vx = vx != null ? vx : 0;
+      this.vy = vy != null ? vy : 0;
+      this.rotation = rotation != null ? rotation : 0;
+      this.radius = radius != null ? radius : 0;
+      GameObject2D.__super__.constructor.call(this, this.id);
+    }
+
+    GameObject2D.prototype.clone = function() {
+      return new GameObject2D(this.id, this.x, this.y, this.vx, this.vy, this.rotation, this.radius);
+    };
+
+    GameObject2D.prototype.setPos = function(x, y) {
+      this.x = x;
+      return this.y = y;
+    };
+
+    GameObject2D.prototype.setVel = function(vx, vy) {
+      this.vx = vx;
+      this.vy = vy;
+      if (this.vx !== 0 || this.vy !== 0) {
+        return this.rotation = Point.getAngle(this.vx, this.vy);
+      }
+    };
+
+    GameObject2D.prototype.update = function(dt) {
+      var newPos;
+      newPos = Point.add(this.x, this.y, this.vx * dt, this.vy * dt);
+      return this.setPos(newPos.x, newPos.y);
+    };
+
+    GameObject2D.prototype.collide = function(state) {
+      this.vx = 0;
+      return this.vy = 0;
+    };
+
+    return GameObject2D;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/explosion.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var Explosion, GameObject, Map, Point;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject = require('./game_object.coffee').GameObject;
+
+  Point = require('./point.coffee').Point;
+
+  Map = require('./map.coffee').Map;
+
+  exports.Explosion = Explosion = (function() {
+
+    __extends(Explosion, GameObject);
+
+    Explosion.prototype.__type = 'Explosion';
+
+    function Explosion(id, x, y, max_radius) {
+      this.id = id;
+      this.x = x;
+      this.y = y;
+      this.max_radius = max_radius;
+      Explosion.__super__.constructor.call(this, this.id, this.x, this.y);
+      this.radius = 0;
+      Map.getInstance().damageAt(this.x, this.y, this.max_radius);
+    }
+
+    Explosion.prototype.clone = function() {
+      var exp;
+      exp = new Explosion(this.id, this.x, this.y, this.max_radius);
+      exp.radius = this.radius;
+      return exp;
+    };
+
+    Explosion.prototype.update = function(dt, state) {
+      var id, object, _ref;
+      this.radius += dt * 100;
+      _ref = state.objects;
+      for (id in _ref) {
+        object = _ref[id];
+        if (object.__type === 'Square' && Point.getDistance(this.x, this.y, object.x, object.y) < this.radius) {
+          object.explode(state);
+        }
+      }
+      Explosion.__super__.update.call(this, dt, state);
+      if (this.radius >= this.max_radius) return state.removeObject(this.id);
+    };
+
+    Explosion.prototype.draw = function(context) {
+      context.save();
+      context.translate(this.x, this.y);
+      context.strokeStyle = "white";
+      context.beginPath();
+      context.arc(0, 0, this.radius, 0, Math.PI * 2, true);
+      context.closePath();
+      context.stroke();
+      return context.restore();
+    };
+
+    return Explosion;
 
   })();
 
@@ -1864,6 +1958,212 @@ function UUID(){}UUID.generate=function(){var a=UUID._getRandomInt,b=UUID._hexAl
 UUID._hexAligner=UUID._getIntAligner(16);
 
 exports.generate = UUID.generate
+});
+
+require.define("/api.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var API, Command, Explosion, GameObject, GameObject2D, LocalAPI, RemoteAPI, Serializable, Square, State, Turns, async, classmap;
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
+
+  Turns = require('./turns.coffee');
+
+  GameObject = require('./game_object.coffee').GameObject;
+
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
+
+  Explosion = require('./explosion.coffee').Explosion;
+
+  State = require('./state.coffee').State;
+
+  Square = require('./square.coffee').Square;
+
+  Command = require('./command.coffee');
+
+  Serializable = require('./serializable.coffee').Serializable;
+
+  async = require('./lib/async.js');
+
+  classmap = null;
+
+  API = API = (function() {
+
+    function API(username, token) {
+      this.username = username;
+      this.token = token;
+    }
+
+    API.prototype.gameIds = function(cb) {
+      return cb(false, []);
+    };
+
+    API.prototype.getGames = function(cb) {
+      return cb(false, []);
+    };
+
+    API.prototype.getGame = function(id, cb) {
+      return cb(true, null);
+    };
+
+    API.prototype.saveGame = function(game, cb) {
+      return cb(true, null);
+    };
+
+    return API;
+
+  })();
+
+  LocalAPI = LocalAPI = (function() {
+
+    __extends(LocalAPI, API);
+
+    function LocalAPI(username, token) {
+      var _this = this;
+      this.username = username;
+      this.token = token;
+      this.saveGame = __bind(this.saveGame, this);
+      this.getGames = __bind(this.getGames, this);
+      this.getGame = __bind(this.getGame, this);
+      this.gameIds = __bind(this.gameIds, this);
+      this.gameIdsKey = __bind(this.gameIdsKey, this);
+      this.gamesKey = __bind(this.gamesKey, this);
+      this.save = __bind(this.save, this);
+      this.load = __bind(this.load, this);
+      LocalAPI.__super__.constructor.call(this, this.username, this.token);
+      this.getGames(function(err, games) {
+        if (err) {
+          alert("Couldn't start API");
+          return;
+        }
+        if (!games) {
+          _this.save(_this.gamesKey(), {});
+          return _this.save(_this.gameIdsKey(), []);
+        }
+      });
+    }
+
+    LocalAPI.prototype.load = function(key) {
+      var item;
+      item = window.localStorage.getItem(key);
+      item = JSON.parse(item);
+      Serializable.deserialize(item, classmap);
+      return item;
+    };
+
+    LocalAPI.prototype.save = function(key, value) {
+      return window.localStorage.setItem(key, JSON.stringify(value));
+    };
+
+    LocalAPI.prototype.gamesKey = function() {
+      return this.username + '!!!games';
+    };
+
+    LocalAPI.prototype.gameIdsKey = function() {
+      return this.username + '!!!game_ids';
+    };
+
+    LocalAPI.prototype.gameIds = function(cb) {
+      return cb(false, this.load(this.gameIdsKey()));
+    };
+
+    LocalAPI.prototype.getGame = function(id, cb) {
+      var _this = this;
+      return this.getGames(function(err, games) {
+        if (err) return cb(err, null);
+        return cb(false, games[id]);
+      });
+    };
+
+    LocalAPI.prototype.getGames = function(cb) {
+      return cb(false, this.load(this.gamesKey()));
+    };
+
+    LocalAPI.prototype.saveGame = function(game, cb) {
+      var _this = this;
+      return async.parallel({
+        game_ids: this.gameIds,
+        games: this.getGames
+      }, function(err, data) {
+        var game_ids, games, _ref;
+        if (err) return cb(err, null);
+        game_ids = data.game_ids;
+        games = data.games;
+        if (!(_ref = game.id, __indexOf.call(game_ids, _ref) >= 0)) {
+          game_ids.push(game.id);
+          _this.save(_this.gameIdsKey(), game_ids);
+        }
+        games[game.id] = game;
+        _this.save(_this.gamesKey(), games);
+        return cb(false, true);
+      });
+    };
+
+    return LocalAPI;
+
+  })();
+
+  RemoteAPI = RemoteAPI = (function() {
+
+    __extends(RemoteAPI, API);
+
+    function RemoteAPI(host, username, token) {
+      this.host = host;
+      this.username = username;
+      this.token = token;
+      RemoteAPI.__super__.constructor.call(this, this.username, this.token);
+    }
+
+    RemoteAPI.prototype.request = function(method, params, callback) {
+      var url;
+      url = this.host + method + '?' + $.params + '&callback=?';
+      return $.getJSON(url, function(data) {
+        return callback(data);
+      });
+    };
+
+    RemoteAPI.prototype.gameIds = function(cb) {
+      var url;
+      url = this.host + '/gameIds?callback=?';
+      return $.getJSON(url, function(data) {
+        return cb(data);
+      });
+    };
+
+    RemoteAPI.prototype.getGames = function(cb) {
+      var url;
+      url = this.host + '/games?callback=?';
+      return $.getJSON(url, function(data) {
+        return cb(data);
+      });
+    };
+
+    RemoteAPI.prototype.getGame = function(id, cb) {
+      var url;
+      url = this.host + '/games/' + id + '?callback=?';
+      return $.getJSON(url, function(data) {
+        return cb(data);
+      });
+    };
+
+    RemoteAPI.prototype.saveGame = function(game, cb) {
+      var url;
+      url = this.host + '/games/save?callback=?';
+      return $.post(url, JSON.stringify(game), (function(data) {
+        return cb(data);
+      }), 'json');
+    };
+
+    return RemoteAPI;
+
+  })();
+
+  classmap = Serializable.buildClassMap(Turns.Game, Turns.Turn, Turns.Player, GameObject, GameObject2D, Explosion, State, Square, Command.Command, Command.MouseCommand, Command.JoinCommand, Command.ExplodeCommand);
+
+  exports.API = API;
+
+  exports.LocalAPI = LocalAPI;
+
+}).call(this);
+
 });
 
 require.define("/lib/async.js", function (require, module, exports, __dirname, __filename) {
@@ -2559,212 +2859,6 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
 }());
 });
 
-require.define("/api.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
-  var API, Command, Explosion, GameObject, GameObject2D, LocalAPI, RemoteAPI, Serializable, Square, State, Turns, async, classmap;
-  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
-
-  Turns = require('./turns.coffee');
-
-  GameObject = require('./game_object.coffee').GameObject;
-
-  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
-
-  Explosion = require('./explosion.coffee').Explosion;
-
-  State = require('./state.coffee').State;
-
-  Square = require('./square.coffee').Square;
-
-  Command = require('./command.coffee');
-
-  Serializable = require('./serializable.coffee').Serializable;
-
-  async = require('./lib/async.js');
-
-  classmap = null;
-
-  API = API = (function() {
-
-    function API(username, token) {
-      this.username = username;
-      this.token = token;
-    }
-
-    API.prototype.gameIds = function(cb) {
-      return cb(false, []);
-    };
-
-    API.prototype.getGames = function(cb) {
-      return cb(false, []);
-    };
-
-    API.prototype.getGame = function(id, cb) {
-      return cb(true, null);
-    };
-
-    API.prototype.saveGame = function(game, cb) {
-      return cb(true, null);
-    };
-
-    return API;
-
-  })();
-
-  LocalAPI = LocalAPI = (function() {
-
-    __extends(LocalAPI, API);
-
-    function LocalAPI(username, token) {
-      var _this = this;
-      this.username = username;
-      this.token = token;
-      this.saveGame = __bind(this.saveGame, this);
-      this.getGames = __bind(this.getGames, this);
-      this.getGame = __bind(this.getGame, this);
-      this.gameIds = __bind(this.gameIds, this);
-      this.gameIdsKey = __bind(this.gameIdsKey, this);
-      this.gamesKey = __bind(this.gamesKey, this);
-      this.save = __bind(this.save, this);
-      this.load = __bind(this.load, this);
-      LocalAPI.__super__.constructor.call(this, this.username, this.token);
-      this.getGames(function(err, games) {
-        if (err) {
-          alert("Couldn't start API");
-          return;
-        }
-        if (!games) {
-          _this.save(_this.gamesKey(), {});
-          return _this.save(_this.gameIdsKey(), []);
-        }
-      });
-    }
-
-    LocalAPI.prototype.load = function(key) {
-      var item;
-      item = window.localStorage.getItem(key);
-      item = JSON.parse(item);
-      Serializable.deserialize(item, classmap);
-      return item;
-    };
-
-    LocalAPI.prototype.save = function(key, value) {
-      return window.localStorage.setItem(key, JSON.stringify(value));
-    };
-
-    LocalAPI.prototype.gamesKey = function() {
-      return this.username + '!!!games';
-    };
-
-    LocalAPI.prototype.gameIdsKey = function() {
-      return this.username + '!!!game_ids';
-    };
-
-    LocalAPI.prototype.gameIds = function(cb) {
-      return cb(false, this.load(this.gameIdsKey()));
-    };
-
-    LocalAPI.prototype.getGame = function(id, cb) {
-      var _this = this;
-      return this.getGames(function(err, games) {
-        if (err) return cb(err, null);
-        return cb(false, games[id]);
-      });
-    };
-
-    LocalAPI.prototype.getGames = function(cb) {
-      return cb(false, this.load(this.gamesKey()));
-    };
-
-    LocalAPI.prototype.saveGame = function(game, cb) {
-      var _this = this;
-      return async.parallel({
-        game_ids: this.gameIds,
-        games: this.getGames
-      }, function(err, data) {
-        var game_ids, games, _ref;
-        if (err) return cb(err, null);
-        game_ids = data.game_ids;
-        games = data.games;
-        if (!(_ref = game.id, __indexOf.call(game_ids, _ref) >= 0)) {
-          game_ids.push(game.id);
-          _this.save(_this.gameIdsKey(), game_ids);
-        }
-        games[game.id] = game;
-        _this.save(_this.gamesKey(), games);
-        return cb(false, true);
-      });
-    };
-
-    return LocalAPI;
-
-  })();
-
-  RemoteAPI = RemoteAPI = (function() {
-
-    __extends(RemoteAPI, API);
-
-    function RemoteAPI(host, username, token) {
-      this.host = host;
-      this.username = username;
-      this.token = token;
-      RemoteAPI.__super__.constructor.call(this, this.username, this.token);
-    }
-
-    RemoteAPI.prototype.request = function(method, params, callback) {
-      var url;
-      url = this.host + method + '?' + $.params + '&callback=?';
-      return $.getJSON(url, function(data) {
-        return callback(data);
-      });
-    };
-
-    RemoteAPI.prototype.gameIds = function(cb) {
-      var url;
-      url = this.host + '/gameIds?callback=?';
-      return $.getJSON(url, function(data) {
-        return cb(data);
-      });
-    };
-
-    RemoteAPI.prototype.getGames = function(cb) {
-      var url;
-      url = this.host + '/games?callback=?';
-      return $.getJSON(url, function(data) {
-        return cb(data);
-      });
-    };
-
-    RemoteAPI.prototype.getGame = function(id, cb) {
-      var url;
-      url = this.host + '/games/' + id + '?callback=?';
-      return $.getJSON(url, function(data) {
-        return cb(data);
-      });
-    };
-
-    RemoteAPI.prototype.saveGame = function(game, cb) {
-      var url;
-      url = this.host + '/games/save?callback=?';
-      return $.post(url, JSON.stringify(game), (function(data) {
-        return cb(data);
-      }), 'json');
-    };
-
-    return RemoteAPI;
-
-  })();
-
-  classmap = Serializable.buildClassMap(Turns.Game, Turns.Turn, Turns.Player, GameObject, GameObject2D, Explosion, State, Square, Command.Command, Command.MouseCommand, Command.JoinCommand, Command.ExplodeCommand);
-
-  exports.API = API;
-
-  exports.LocalAPI = LocalAPI;
-
-}).call(this);
-
-});
-
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
   var API, Timeboats, Turns, UUID, async, drawGames, timestamp;
@@ -2817,7 +2911,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
           alert("couldn't load game " + id);
           return;
         }
-        timeboats = new Timeboats(game, context, canvas.width, canvas.height, api);
+        timeboats = new Timeboats(game, context, canvas.width, canvas.height, api, window.document);
         timeboats.turnClicked(null);
         return render = true;
       });
@@ -2838,8 +2932,10 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
             alert("couldn't load game " + id);
             return;
           }
+          console.log("loaded game");
+          console.log(window.document);
           console.log(game_ids[0], games, game);
-          timeboats = new Timeboats(game, context, canvas.width, canvas.height, api);
+          timeboats = new Timeboats(game, context, canvas.width, canvas.height, api, window.document);
           timeboats.turnClicked(null);
           console.log(game, timeboats);
           return render = true;
@@ -2858,7 +2954,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       order = [1, 2];
       $("#playbutton").prop("disabled", true);
       game = new Turns.Game(UUID.generate(), players, order);
-      timeboats = new Timeboats(game, context, canvas.width, canvas.height, api);
+      timeboats = new Timeboats(game, context, canvas.width, canvas.height, api, window.document);
       timeboats.turnClicked(null);
       return render = true;
     });
