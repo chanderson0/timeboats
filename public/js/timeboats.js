@@ -479,10 +479,12 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.setFrameNum = function(value, updateSlider) {
+      var frame_not_consecutive;
       if (updateSlider == null) updateSlider = true;
+      frame_not_consecutive = value !== this.frame_num + 1;
       this.frame_num = value;
       Map.getInstance().setFrame(value);
-      Map.getInstance().computeTerrainState();
+      Map.getInstance().computeTerrainState(frame_not_consecutive);
       if (updateSlider) return this.updateSlider(value);
     };
 
@@ -812,7 +814,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
 
     instance = null;
 
-    Map.CELL_SIZE_PX = 12;
+    Map.CELL_SIZE_PX = 8;
 
     Map.getInstance = function() {
       if (!(instance != null)) instance = new this;
@@ -828,6 +830,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       this.waterLevel = 5;
       this.waterDt = 0;
       this.frame_num = 0;
+      this.last_computed_damage = 0;
       this.damages = [];
       Map.__super__.constructor.apply(this, arguments);
     }
@@ -983,29 +986,34 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       if (overwrite) return this.damages["f" + this.frame_num] = [];
     };
 
-    Map.prototype.computeTerrainState = function() {
-      var d, i, _ref, _results;
-      if (this.isInitialized) {
+    Map.prototype.computeTerrainState = function(recompute) {
+      var d, i, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4, _ref5;
+      if (recompute == null) recompute = true;
+      if (!this.isInitialized) return;
+      if (recompute) {
+        console.log("recomputing terrain");
         this.resetTerrain();
-        _results = [];
         for (i = 0, _ref = this.frame_num; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
           if (this.damages["f" + i] != null) {
-            _results.push((function() {
-              var _i, _len, _ref2, _results2;
-              _ref2 = this.damages["f" + i];
-              _results2 = [];
-              for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-                d = _ref2[_i];
-                _results2.push(this.applyDamageGaussian(d[0], d[1], d[2]));
-              }
-              return _results2;
-            }).call(this));
-          } else {
-            _results.push(void 0);
+            _ref2 = this.damages["f" + i];
+            for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+              d = _ref2[_i];
+              this.applyDamageGaussian(d[0], d[1], d[2]);
+            }
           }
         }
-        return _results;
+      } else {
+        for (i = _ref3 = this.last_computed_damage, _ref4 = this.frame_num; _ref3 <= _ref4 ? i <= _ref4 : i >= _ref4; _ref3 <= _ref4 ? i++ : i--) {
+          if (this.damages["f" + i] != null) {
+            _ref5 = this.damages["f" + i];
+            for (_j = 0, _len2 = _ref5.length; _j < _len2; _j++) {
+              d = _ref5[_j];
+              this.applyDamageGaussian(d[0], d[1], d[2]);
+            }
+          }
+        }
       }
+      return this.last_computed_damage = this.frame_num;
     };
 
     Map.prototype.resetTerrain = function() {

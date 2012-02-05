@@ -134,11 +134,13 @@ exports.Timeboats = class Timeboats
       console.log "couldn't switch state"
 
   setFrameNum: (value, updateSlider = true) ->
+    frame_not_consecutive = value != @frame_num + 1
+
     @frame_num = value
-    Map.getInstance().setFrame(value)
-    Map.getInstance().computeTerrainState()
+    Map.getInstance().setFrame value 
+    Map.getInstance().computeTerrainState frame_not_consecutive
     if updateSlider
-      @updateSlider(value)
+      @updateSlider value
 
   updateSlider: (value, max = -1) ->
     $("#timeslider").prop 'value', value
