@@ -8,7 +8,7 @@ exports.Map = class Map extends GameObject
   __type: 'Map'
   instance = null
 
-  @CELL_SIZE_PX: 12
+  @CELL_SIZE_PX: 8
 
   #singleton instantiator
   @getInstance: ->
@@ -26,6 +26,7 @@ exports.Map = class Map extends GameObject
     @waterLevel = 5
     @waterDt = 0
     @frame_num = 0
+    @last_computed_damage = 0
     @damages = []
     super
 
@@ -144,12 +145,21 @@ exports.Map = class Map extends GameObject
       @damages["f#{@frame_num}"] = []
 
   # after setting the map's current frame, this will update the terrain to reflect that frame.
-  computeTerrainState: ->
-    if @isInitialized
+  computeTerrainState: (recompute = true) ->
+    return if not @isInitialized
+
+    if recompute
+      console.log "recomputing terrain"
       @.resetTerrain()
       for i in [0..@frame_num]
         if @damages["f#{i}"]?
           @.applyDamageGaussian(d[0], d[1], d[2]) for d in @damages["f#{i}"]
+    else
+      for i in [@last_computed_damage..@frame_num]
+        if @damages["f#{i}"]?
+          @.applyDamageGaussian(d[0], d[1], d[2]) for d in @damages["f#{i}"]
+    
+    @last_computed_damage = @frame_num
 
   # reset the map terrain to the way it was at the beginning of time. (PANGEA?!)
   resetTerrain: ->
