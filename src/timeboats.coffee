@@ -3,6 +3,7 @@ Square = require('./square.coffee').Square
 Command = require('./command.coffee')
 Point = require('./point.coffee').Point
 Map = require('./map.coffee').Map
+AssetLoader = require('./asset_loader.coffee').AssetLoader
 
 exports.Timeboats = class Timeboats
   constructor: (@game, @context, @width, @height, @api = null, @document = null) ->
@@ -18,7 +19,7 @@ exports.Timeboats = class Timeboats
 
     if not @game.mapSeed?
       @game.setMap new Date().getTime()
-    
+
     Map.getInstance().generate @width / Map.CELL_SIZE_PX,
       @height / Map.CELL_SIZE_PX,
       @game.mapSeed
@@ -31,6 +32,8 @@ exports.Timeboats = class Timeboats
       @m_context = @m_canvas.getContext '2d'
     else
       @m_canvas = null
+
+    AssetLoader.getInstance().load()
 
     @game.render()
 
@@ -51,7 +54,7 @@ exports.Timeboats = class Timeboats
     console.log oldState, '->', newState
 
     if (oldState == "init" || oldState == "ready") and newState == "recording"
-      player = new Square(@game.next_turn_id, 100, 100, 20, @game.currentPlayer().color)
+      player = new Square(@game.next_turn_id, 100, 100, 48, @game.currentPlayer().color)
       command = new Command.JoinCommand player.id, player
       @addCommand @command_history, command
       @addCommand @active_commands, command

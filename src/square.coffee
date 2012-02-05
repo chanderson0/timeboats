@@ -2,6 +2,7 @@ GameObject2D = require('./game_object_2d.coffee').GameObject2D
 Point = require('./point.coffee').Point
 Explosion = require('./explosion.coffee').Explosion
 Map = require('./map.coffee').Map
+AssetLoader = require('./asset_loader.coffee').AssetLoader
 
 exports.Square = class Square extends GameObject2D
   __type: 'Square'
@@ -47,11 +48,12 @@ exports.Square = class Square extends GameObject2D
     context.save()
     if options? and options.dim
       context.globalAlpha = 0.5
-      
+
     context.fillStyle = @fill
     context.translate @x, @y
     context.rotate @rotation
-    context.fillRect -@size/2, -@size/2, @size, @size
+    # context.fillRect -@size/2, -@size/2, @size, @size
+    context.drawImage(AssetLoader.getInstance().getAsset("boat"), -@size/2, -@size/2, @size, @size)
     context.restore()
 
   collide: (state) ->
