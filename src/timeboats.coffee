@@ -54,7 +54,7 @@ exports.Timeboats = class Timeboats
     console.log oldState, '->', newState
 
     if (oldState == "init" || oldState == "ready") and newState == "recording"
-      player = new Square(@game.next_turn_id, 100, 100, 48, @game.currentPlayer().color)
+      player = new Square(@game.next_turn_id, 100, 100, 32, @game.currentPlayer().color)
       command = new Command.JoinCommand player.id, player
       @addCommand @command_history, command
       @addCommand @active_commands, command
@@ -140,7 +140,7 @@ exports.Timeboats = class Timeboats
     frame_not_consecutive = value != @frame_num + 1
 
     @frame_num = value
-    Map.getInstance().setFrame value 
+    Map.getInstance().setFrame value
     Map.getInstance().computeTerrainState frame_not_consecutive
     if updateSlider
       @updateSlider value

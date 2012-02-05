@@ -410,7 +410,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       var command, player;
       console.log(oldState, '->', newState);
       if ((oldState === "init" || oldState === "ready") && newState === "recording") {
-        player = new Square(this.game.next_turn_id, 100, 100, 48, this.game.currentPlayer().color);
+        player = new Square(this.game.next_turn_id, 100, 100, 32, this.game.currentPlayer().color);
         command = new Command.JoinCommand(player.id, player);
         this.addCommand(this.command_history, command);
         this.addCommand(this.active_commands, command);
