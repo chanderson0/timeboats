@@ -18,6 +18,8 @@ exports.AssetLoader = class AssetLoader
     # use getAsset(key) to access them later.
     @urls =
       boat: "boat.png"
+      checkpoint0: "checkpoint0.png"
+      checkpoint1: "checkpoint1.png"
 
     @numAssets = @urls.length
     @numLoaded = 0

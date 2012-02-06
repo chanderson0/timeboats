@@ -29,6 +29,11 @@ exports.Square = class Square extends GameObject2D
     state.addObject id, explosion
     state.removeObject @id
 
+  setVel: (vx, vy) ->
+    super vx, vy
+    if @vx != 0 or @vy != 0
+      @rotation = Point.getAngle(@vx, @vy)
+
   update: (dt, state) ->
     dir = Point.subtract @destx, @desty, @x, @y
     dist = Point.getLength dir.x, dir.y

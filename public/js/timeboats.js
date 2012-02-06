@@ -795,7 +795,7 @@ require.define("/serializable.coffee", function (require, module, exports, __dir
 
 require.define("/map.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var GameObject, Gaussian, Map, MapCell, Point, Random;
+  var Checkpoint, GameObject, Gaussian, Map, MapCell, Point, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject = require('./game_object').GameObject;
@@ -807,6 +807,8 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
   Gaussian = require('./gaussian.coffee').Gaussian;
 
   Point = require('./point.coffee').Point;
+
+  Checkpoint = require('./checkpoint.coffee').Checkpoint;
 
   exports.Map = Map = (function() {
     var instance;
@@ -835,6 +837,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       this.frame_num = 0;
       this.last_computed_damage = 0;
       this.damages = [];
+      this.checkpoints = [];
       Map.__super__.constructor.apply(this, arguments);
     }
 
@@ -843,18 +846,23 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.update = function(dt) {
-      var alpha, b, g, landAlpha, o_b, o_g, o_r, r, waterAlpha, x, y, _ref, _results;
+      var alpha, b, checkpoint, g, landAlpha, o_b, o_g, o_r, r, waterAlpha, x, y, _i, _len, _ref, _ref2, _results;
       this.waterDt += dt;
+      _ref = this.checkpoints;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        checkpoint = _ref[_i];
+        checkpoint.update(dt);
+      }
       if (this.waterDt >= 1 / 10) {
         this.waterDt = 0;
         if (this.isInitialized) {
           _results = [];
-          for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
+          for (x = 0, _ref2 = this.width - 1; 0 <= _ref2 ? x <= _ref2 : x >= _ref2; 0 <= _ref2 ? x++ : x--) {
             _results.push((function() {
-              var _ref2, _ref3, _results2;
+              var _ref3, _ref4, _results2;
               _results2 = [];
-              for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
-                _ref3 = this.cells[x][y].getColor(), o_r = _ref3[0], o_g = _ref3[1], o_b = _ref3[2];
+              for (y = 0, _ref3 = this.height - 1; 0 <= _ref3 ? y <= _ref3 : y >= _ref3; 0 <= _ref3 ? y++ : y--) {
+                _ref4 = this.cells[x][y].getColor(), o_r = _ref4[0], o_g = _ref4[1], o_b = _ref4[2];
                 this.cells[x][y].excitement *= 0.9;
                 if (this.random.nextf() > 0.97) {
                   this.cells[x][y].excitement += -0.3 + this.random.nextf() * 0.6;
@@ -891,7 +899,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.draw = function(context, options) {
-      var b, cellX, cellY, g, r, x, y, _ref, _ref2, _ref3;
+      var b, cellX, cellY, checkpoint, g, r, x, y, _i, _len, _ref, _ref2, _ref3, _ref4;
       if (options == null) options = {};
       if (this.isInitialized) {
         context.save();
@@ -906,6 +914,11 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
               context.fillRect(cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
             }
           }
+        }
+        _ref4 = this.checkpoints;
+        for (_i = 0, _len = _ref4.length; _i < _len; _i++) {
+          checkpoint = _ref4[_i];
+          checkpoint.draw(context);
         }
         return context.restore();
       }
@@ -1076,12 +1089,13 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.generate = function(width, height, seed) {
-      var col, i, numGaussians, x, y, _ref, _ref2, _ref3, _ref4;
+      var col, hasClearPosition, i, numCheckpoints, numGaussians, posX, posY, x, y, _ref, _ref2, _ref3, _ref4;
       this.width = width;
       this.height = height;
       this.random = new Random(seed);
       this.isInitialized = false;
       this.cells = [];
+      this.checkpoints = [];
       for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
         col = [];
         for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
@@ -1107,6 +1121,20 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
           this.cells[x][y].altitude = Math.floor(this.cells[x][y].altitude);
           this.cells[x][y].saveInitialState();
         }
+      }
+      numCheckpoints = 2;
+      for (i = 1; 1 <= numCheckpoints ? i <= numCheckpoints : i >= numCheckpoints; 1 <= numCheckpoints ? i++ : i--) {
+        hasClearPosition = false;
+        posX = 0;
+        posY = 0;
+        while (!hasClearPosition) {
+          posX = this.random.next() % this.width;
+          posY = this.random.next() % this.height;
+          if (this.cells[posX][posY].altitude < this.waterLevel) {
+            hasClearPosition = true;
+          }
+        }
+        this.checkpoints.push(new Checkpoint(i, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX));
       }
       return this.isInitialized = true;
     };
@@ -1404,6 +1432,189 @@ require.define("/point.coffee", function (require, module, exports, __dirname, _
 
 });
 
+require.define("/checkpoint.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var AssetLoader, Checkpoint, GameObject2D;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
+
+  AssetLoader = require('./asset_loader.coffee').AssetLoader;
+
+  exports.Checkpoint = Checkpoint = (function() {
+
+    __extends(Checkpoint, GameObject2D);
+
+    Checkpoint.prototype.__type = 'Checkpoint';
+
+    function Checkpoint(id, x, y) {
+      this.id = id;
+      this.x = x;
+      this.y = y;
+      Checkpoint.__super__.constructor.call(this, this.id, this.x, this.y);
+      this.frame = 0;
+      this.dt = 0;
+      this.yInitial = this.y;
+      this.y += 2;
+    }
+
+    Checkpoint.prototype.clone = function() {
+      var c;
+      c = new Checkpoint(this.id, this.x, this.y);
+      c.frame = this.frame;
+      c.dt = this.dt;
+      return c;
+    };
+
+    Checkpoint.prototype.update = function(dt) {
+      this.dt += dt;
+      if (this.dt >= 0.4) {
+        this.dt = 0;
+        this.frame++;
+        this.frame %= 2;
+      }
+      this.ay = (this.yInitial - this.y) * 0.8;
+      return Checkpoint.__super__.update.call(this, dt);
+    };
+
+    Checkpoint.prototype.draw = function(context) {
+      return context.drawImage(AssetLoader.getInstance().getAsset("checkpoint" + this.frame), this.x, this.y, 43.5, 48);
+    };
+
+    return Checkpoint;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/game_object_2d.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var GameObject, GameObject2D, Point;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject = require('./game_object.coffee').GameObject;
+
+  Point = require('./point.coffee').Point;
+
+  exports.GameObject2D = GameObject2D = (function() {
+
+    __extends(GameObject2D, GameObject);
+
+    GameObject2D.prototype.__type = 'GameObject2D';
+
+    function GameObject2D(id, x, y, vx, vy, rotation, radius) {
+      this.id = id;
+      this.x = x != null ? x : 0;
+      this.y = y != null ? y : 0;
+      this.vx = vx != null ? vx : 0;
+      this.vy = vy != null ? vy : 0;
+      this.rotation = rotation != null ? rotation : 0;
+      this.radius = radius != null ? radius : 0;
+      GameObject2D.__super__.constructor.call(this, this.id);
+      this.ax = 0;
+      this.ay = 0;
+    }
+
+    GameObject2D.prototype.clone = function() {
+      return new GameObject2D(this.id, this.x, this.y, this.vx, this.vy, this.rotation, this.radius);
+    };
+
+    GameObject2D.prototype.setPos = function(x, y) {
+      this.x = x;
+      return this.y = y;
+    };
+
+    GameObject2D.prototype.setVel = function(vx, vy) {
+      this.vx = vx;
+      return this.vy = vy;
+    };
+
+    GameObject2D.prototype.update = function(dt) {
+      var newPos, newVel;
+      newVel = Point.add(this.vx, this.vy, this.ax * dt, this.ay * dt);
+      this.setVel(newVel.x, newVel.y);
+      newPos = Point.add(this.x, this.y, this.vx * dt, this.vy * dt);
+      return this.setPos(newPos.x, newPos.y);
+    };
+
+    GameObject2D.prototype.collide = function(state) {
+      this.vx = 0;
+      return this.vy = 0;
+    };
+
+    return GameObject2D;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/asset_loader.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var AssetLoader;
+
+  exports.AssetLoader = AssetLoader = (function() {
+    var assetsDirectory, instance;
+
+    instance = null;
+
+    assetsDirectory = "img/";
+
+    AssetLoader.getInstance = function() {
+      if (!(instance != null)) instance = new this;
+      return instance;
+    };
+
+    AssetLoader.prototype.clone = function() {
+      return instance;
+    };
+
+    function AssetLoader() {
+      this.assets = [];
+      this.loaded = [];
+      this.urls = {
+        boat: "boat.png",
+        checkpoint0: "checkpoint0.png",
+        checkpoint1: "checkpoint1.png"
+      };
+      this.numAssets = this.urls.length;
+      this.numLoaded = 0;
+    }
+
+    AssetLoader.prototype.load = function() {
+      var asset, url, _ref, _results;
+      if (this.numLoaded === this.numAssets) return;
+      _ref = this.urls;
+      _results = [];
+      for (asset in _ref) {
+        url = _ref[asset];
+        this.loaded[asset] = false;
+        this.assets[asset] = new Image;
+        this.assets[asset].name = asset;
+        this.assets[asset].onLoad = function() {
+          AssetLoader.getInstance().loaded[this.name] = true;
+          return AssetLoader.getInstance().numLoaded++;
+        };
+        _results.push(this.assets[asset].src = assetsDirectory + url);
+      }
+      return _results;
+    };
+
+    AssetLoader.prototype.getAsset = function(name) {
+      return this.assets[name];
+    };
+
+    return AssetLoader;
+
+  })();
+
+}).call(this);
+
+});
+
 require.define("/square.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
   var AssetLoader, Explosion, GameObject2D, Map, Point, Square;
@@ -1456,6 +1667,13 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       return state.removeObject(this.id);
     };
 
+    Square.prototype.setVel = function(vx, vy) {
+      Square.__super__.setVel.call(this, vx, vy);
+      if (this.vx !== 0 || this.vy !== 0) {
+        return this.rotation = Point.getAngle(this.vx, this.vy);
+      }
+    };
+
     Square.prototype.update = function(dt, state) {
       var dir, dist, to_move;
       dir = Point.subtract(this.destx, this.desty, this.x, this.y);
@@ -1488,68 +1706,6 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
     };
 
     return Square;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/game_object_2d.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var GameObject, GameObject2D, Point;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  GameObject = require('./game_object.coffee').GameObject;
-
-  Point = require('./point.coffee').Point;
-
-  exports.GameObject2D = GameObject2D = (function() {
-
-    __extends(GameObject2D, GameObject);
-
-    GameObject2D.prototype.__type = 'GameObject2D';
-
-    function GameObject2D(id, x, y, vx, vy, rotation, radius) {
-      this.id = id;
-      this.x = x != null ? x : 0;
-      this.y = y != null ? y : 0;
-      this.vx = vx != null ? vx : 0;
-      this.vy = vy != null ? vy : 0;
-      this.rotation = rotation != null ? rotation : 0;
-      this.radius = radius != null ? radius : 0;
-      GameObject2D.__super__.constructor.call(this, this.id);
-    }
-
-    GameObject2D.prototype.clone = function() {
-      return new GameObject2D(this.id, this.x, this.y, this.vx, this.vy, this.rotation, this.radius);
-    };
-
-    GameObject2D.prototype.setPos = function(x, y) {
-      this.x = x;
-      return this.y = y;
-    };
-
-    GameObject2D.prototype.setVel = function(vx, vy) {
-      this.vx = vx;
-      this.vy = vy;
-      if (this.vx !== 0 || this.vy !== 0) {
-        return this.rotation = Point.getAngle(this.vx, this.vy);
-      }
-    };
-
-    GameObject2D.prototype.update = function(dt) {
-      var newPos;
-      newPos = Point.add(this.x, this.y, this.vx * dt, this.vy * dt);
-      return this.setPos(newPos.x, newPos.y);
-    };
-
-    GameObject2D.prototype.collide = function(state) {
-      this.vx = 0;
-      return this.vy = 0;
-    };
-
-    return GameObject2D;
 
   })();
 
@@ -1617,67 +1773,6 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
     };
 
     return Explosion;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/asset_loader.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var AssetLoader;
-
-  exports.AssetLoader = AssetLoader = (function() {
-    var assetsDirectory, instance;
-
-    instance = null;
-
-    assetsDirectory = "img/";
-
-    AssetLoader.getInstance = function() {
-      if (!(instance != null)) instance = new this;
-      return instance;
-    };
-
-    AssetLoader.prototype.clone = function() {
-      return instance;
-    };
-
-    function AssetLoader() {
-      this.assets = [];
-      this.loaded = [];
-      this.urls = {
-        boat: "boat.png"
-      };
-      this.numAssets = this.urls.length;
-      this.numLoaded = 0;
-    }
-
-    AssetLoader.prototype.load = function() {
-      var asset, url, _ref, _results;
-      if (this.numLoaded === this.numAssets) return;
-      _ref = this.urls;
-      _results = [];
-      for (asset in _ref) {
-        url = _ref[asset];
-        this.loaded[asset] = false;
-        this.assets[asset] = new Image;
-        this.assets[asset].name = asset;
-        this.assets[asset].onLoad = function() {
-          AssetLoader.getInstance().loaded[this.name] = true;
-          return AssetLoader.getInstance().numLoaded++;
-        };
-        _results.push(this.assets[asset].src = assetsDirectory + url);
-      }
-      return _results;
-    };
-
-    AssetLoader.prototype.getAsset = function(name) {
-      return this.assets[name];
-    };
-
-    return AssetLoader;
 
   })();
 

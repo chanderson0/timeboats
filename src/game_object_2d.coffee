@@ -6,6 +6,8 @@ exports.GameObject2D = class GameObject2D extends GameObject
 
   constructor: (@id, @x = 0, @y = 0, @vx = 0, @vy = 0, @rotation = 0, @radius = 0) ->
     super @id
+    @ax = 0
+    @ay = 0
 
   clone: ->
     new GameObject2D @id, @x, @y, @vx, @vy, @rotation, @radius
@@ -18,10 +20,10 @@ exports.GameObject2D = class GameObject2D extends GameObject
     @vx = vx
     @vy = vy
 
-    if @vx != 0 or @vy != 0
-      @rotation = Point.getAngle(@vx, @vy)
-
   update: (dt) ->
+    newVel = Point.add(@vx, @vy, @ax * dt, @ay * dt)
+    @setVel newVel.x, newVel.y
+
     newPos = Point.add(@x, @y, @vx * dt, @vy * dt)
     @setPos newPos.x, newPos.y
 

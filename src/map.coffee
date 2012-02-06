@@ -3,6 +3,7 @@ MapCell = require('./map_cell.coffee').MapCell
 Random = require('./random.coffee').Random
 Gaussian = require('./gaussian.coffee').Gaussian
 Point = require('./point.coffee').Point
+Checkpoint = require('./checkpoint.coffee').Checkpoint
 
 exports.Map = class Map extends GameObject
   __type: 'Map'
@@ -28,12 +29,16 @@ exports.Map = class Map extends GameObject
     @frame_num = 0
     @last_computed_damage = 0
     @damages = []
+    @checkpoints = []
     super
 
   clone: -> instance
 
   update: (dt) ->
     @waterDt += dt
+    for checkpoint in @checkpoints
+      checkpoint.update dt
+
     if (@waterDt >= 1 / 10)
       @waterDt = 0
       if @isInitialized
@@ -80,12 +85,15 @@ exports.Map = class Map extends GameObject
 
             context.fillStyle = "rgba(#{r}, #{g}, #{b}, 1)"
             context.fillRect cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
+
+      for checkpoint in @checkpoints
+        checkpoint.draw context
       context.restore()
 
   drawRegion: (context, options = {}) ->
     if @isInitialized
       context.save()
-    
+
       startX = Math.max(0, Math.floor(options.region.x / Map.CELL_SIZE_PX))
       startY = Math.max(0, Math.floor(options.region.y / Map.CELL_SIZE_PX))
       endX   = Math.min(startX + Math.ceil(options.region.width / Map.CELL_SIZE_PX), @width-1)
@@ -158,7 +166,7 @@ exports.Map = class Map extends GameObject
       for i in [@last_computed_damage..@frame_num]
         if @damages["f#{i}"]?
           @.applyDamageGaussian(d[0], d[1], d[2]) for d in @damages["f#{i}"]
-    
+
     @last_computed_damage = @frame_num
 
   # reset the map terrain to the way it was at the beginning of time. (PANGEA?!)
@@ -200,6 +208,7 @@ exports.Map = class Map extends GameObject
     # initialize a blank map
     @isInitialized = false
     @cells = []
+    @checkpoints = []
 
     for x in [0..@width - 1]
       col = []
@@ -231,6 +240,19 @@ exports.Map = class Map extends GameObject
           @cells[x][y].isPlant = true
         @cells[x][y].altitude = Math.floor(@cells[x][y].altitude)
         @cells[x][y].saveInitialState()
+
+    #now add some checkpoints.
+    numCheckpoints = 2 # TODO probably should be configurable from outside the class
+    for i in [1..numCheckpoints]
+      hasClearPosition = false
+      posX = 0
+      posY = 0
+      while !hasClearPosition
+        posX = @random.next() % @width
+        posY = @random.next() % @height
+        if (@cells[posX][posY].altitude < @waterLevel)
+          hasClearPosition = true
+      @checkpoints.push new Checkpoint(i, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX)
 
     @isInitialized = true
 
