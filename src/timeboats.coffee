@@ -12,7 +12,7 @@ exports.Timeboats = class Timeboats
 
     @gamestate = "init"
 
-    @frame_history = [new State()]
+    @frame_history = []
     @command_history = []
     @setFrameNum(0)
     @active_commands = []
@@ -20,9 +20,16 @@ exports.Timeboats = class Timeboats
     if not @game.mapSeed?
       @game.setMap new Date().getTime()
 
+    initialState = new State()
+
     Map.getInstance().generate @width / Map.CELL_SIZE_PX,
       @height / Map.CELL_SIZE_PX,
       @game.mapSeed
+
+    for checkpoint in Map.getInstance().checkpoints
+      initialState.addObject(checkpoint.id, checkpoint)
+
+    @frame_history.push initialState
 
     @full_redraw = false
     if @document?

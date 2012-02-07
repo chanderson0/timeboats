@@ -20,6 +20,8 @@ exports.AssetLoader = class AssetLoader
       boat: "boat.png"
       checkpoint0: "checkpoint0.png"
       checkpoint1: "checkpoint1.png"
+      checkpoint_checked0: "checkpoint_checked0.png"
+      checkpoint_checked1: "checkpoint_checked1.png"
 
     @numAssets = @urls.length
     @numLoaded = 0

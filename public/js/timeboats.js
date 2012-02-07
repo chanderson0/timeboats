@@ -360,6 +360,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
   exports.Timeboats = Timeboats = (function() {
 
     function Timeboats(game, context, width, height, api, document) {
+      var checkpoint, initialState, _i, _len, _ref;
       this.game = game;
       this.context = context;
       this.width = width;
@@ -371,12 +372,19 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.timestep = 1 / 60;
       this.renderstep = 1 / 60;
       this.gamestate = "init";
-      this.frame_history = [new State()];
+      this.frame_history = [];
       this.command_history = [];
       this.setFrameNum(0);
       this.active_commands = [];
       if (!(this.game.mapSeed != null)) this.game.setMap(new Date().getTime());
+      initialState = new State();
       Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, this.game.mapSeed);
+      _ref = Map.getInstance().checkpoints;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        checkpoint = _ref[_i];
+        initialState.addObject(checkpoint.id, checkpoint);
+      }
+      this.frame_history.push(initialState);
       this.full_redraw = false;
       if (this.document != null) {
         this.m_canvas = this.document.createElement('canvas');
@@ -845,24 +853,19 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       return instance;
     };
 
-    Map.prototype.update = function(dt) {
-      var alpha, b, checkpoint, g, landAlpha, o_b, o_g, o_r, r, waterAlpha, x, y, _i, _len, _ref, _ref2, _results;
+    Map.prototype.update = function(dt, state) {
+      var alpha, b, g, landAlpha, o_b, o_g, o_r, r, waterAlpha, x, y, _ref, _results;
       this.waterDt += dt;
-      _ref = this.checkpoints;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        checkpoint = _ref[_i];
-        checkpoint.update(dt);
-      }
       if (this.waterDt >= 1 / 10) {
         this.waterDt = 0;
         if (this.isInitialized) {
           _results = [];
-          for (x = 0, _ref2 = this.width - 1; 0 <= _ref2 ? x <= _ref2 : x >= _ref2; 0 <= _ref2 ? x++ : x--) {
+          for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
             _results.push((function() {
-              var _ref3, _ref4, _results2;
+              var _ref2, _ref3, _results2;
               _results2 = [];
-              for (y = 0, _ref3 = this.height - 1; 0 <= _ref3 ? y <= _ref3 : y >= _ref3; 0 <= _ref3 ? y++ : y--) {
-                _ref4 = this.cells[x][y].getColor(), o_r = _ref4[0], o_g = _ref4[1], o_b = _ref4[2];
+              for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
+                _ref3 = this.cells[x][y].getColor(), o_r = _ref3[0], o_g = _ref3[1], o_b = _ref3[2];
                 this.cells[x][y].excitement *= 0.9;
                 if (this.random.nextf() > 0.97) {
                   this.cells[x][y].excitement += -0.3 + this.random.nextf() * 0.6;
@@ -899,7 +902,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.draw = function(context, options) {
-      var b, cellX, cellY, checkpoint, g, r, x, y, _i, _len, _ref, _ref2, _ref3, _ref4;
+      var b, cellX, cellY, g, r, x, y, _ref, _ref2, _ref3;
       if (options == null) options = {};
       if (this.isInitialized) {
         context.save();
@@ -914,11 +917,6 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
               context.fillRect(cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX);
             }
           }
-        }
-        _ref4 = this.checkpoints;
-        for (_i = 0, _len = _ref4.length; _i < _len; _i++) {
-          checkpoint = _ref4[_i];
-          checkpoint.draw(context);
         }
         return context.restore();
       }
@@ -944,6 +942,20 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
         }
         return context.restore();
       }
+    };
+
+    Map.prototype.setRegionDirty = function(xStart, yStart, xFinish, yFinish) {
+      var x, xCellFinish, xCellStart, y, yCellFinish, yCellStart;
+      xCellStart = Math.max(0, this.getCellAt(xStart));
+      yCellStart = Math.max(0, this.getCellAt(yStart));
+      xCellFinish = Math.min(this.width - 1, this.getCellAt(xFinish));
+      yCellFinish = Math.min(this.height - 1, this.getCellAt(yFinish));
+      for (x = xCellStart; xCellStart <= xCellFinish ? x <= xCellFinish : x >= xCellFinish; xCellStart <= xCellFinish ? x++ : x--) {
+        for (y = yCellStart; yCellStart <= yCellFinish ? y <= yCellFinish : y >= yCellFinish; yCellStart <= yCellFinish ? y++ : y--) {
+          this.cells[x][y].dirty = true;
+        }
+      }
+      return true;
     };
 
     Map.prototype.collideWith = function(obj, state, disturb) {
@@ -1089,7 +1101,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.generate = function(width, height, seed) {
-      var col, hasClearPosition, i, numCheckpoints, numGaussians, posX, posY, x, y, _ref, _ref2, _ref3, _ref4;
+      var ck, col, hasClearPosition, i, numCheckpoints, numGaussians, posX, posY, x, y, _ref, _ref2, _ref3, _ref4;
       this.width = width;
       this.height = height;
       this.random = new Random(seed);
@@ -1134,7 +1146,10 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
             hasClearPosition = true;
           }
         }
-        this.checkpoints.push(new Checkpoint(i, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX));
+        ck = new Checkpoint("checkpoint" + i, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX);
+        ck.map = this;
+        ck.y += 5;
+        this.checkpoints.push(ck);
       }
       return this.isInitialized = true;
     };
@@ -1434,12 +1449,14 @@ require.define("/point.coffee", function (require, module, exports, __dirname, _
 
 require.define("/checkpoint.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var AssetLoader, Checkpoint, GameObject2D;
+  var AssetLoader, Checkpoint, GameObject2D, Point;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject2D = require('./game_object_2d.coffee').GameObject2D;
 
   AssetLoader = require('./asset_loader.coffee').AssetLoader;
+
+  Point = require('./point.coffee').Point;
 
   exports.Checkpoint = Checkpoint = (function() {
 
@@ -1455,7 +1472,8 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
       this.frame = 0;
       this.dt = 0;
       this.yInitial = this.y;
-      this.y += 2;
+      this.map = null;
+      this.checked = false;
     }
 
     Checkpoint.prototype.clone = function() {
@@ -1463,22 +1481,44 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
       c = new Checkpoint(this.id, this.x, this.y);
       c.frame = this.frame;
       c.dt = this.dt;
+      c.yInitial = this.yInitial;
+      c.map = this.map;
+      c.checked = this.checked;
       return c;
     };
 
-    Checkpoint.prototype.update = function(dt) {
+    Checkpoint.prototype.update = function(dt, state) {
+      var id, object, _ref;
       this.dt += dt;
       if (this.dt >= 0.4) {
         this.dt = 0;
         this.frame++;
         this.frame %= 2;
       }
-      this.ay = (this.yInitial - this.y) * 0.8;
+      if (this.map != null) {
+        this.map.setRegionDirty(this.x, this.y, this.x + 43.5, this.y + 48);
+      }
+      this.ay = this.yInitial - this.y;
+      _ref = state.objects;
+      for (id in _ref) {
+        object = _ref[id];
+        if (object.__type === 'Square' && Point.getDistance(this.x + 21, this.y + 24, object.x, object.y) < 20) {
+          object.explode(state);
+          this.checked = true;
+        }
+      }
       return Checkpoint.__super__.update.call(this, dt);
     };
 
     Checkpoint.prototype.draw = function(context) {
-      return context.drawImage(AssetLoader.getInstance().getAsset("checkpoint" + this.frame), this.x, this.y, 43.5, 48);
+      var assetId;
+      assetId = "";
+      if (this.checked) {
+        assetId = "checkpoint_checked" + this.frame;
+      } else {
+        assetId = "checkpoint" + this.frame;
+      }
+      return context.drawImage(AssetLoader.getInstance().getAsset(assetId), this.x, this.y, 43.5, 48);
     };
 
     return Checkpoint;
@@ -1504,7 +1544,7 @@ require.define("/game_object_2d.coffee", function (require, module, exports, __d
 
     GameObject2D.prototype.__type = 'GameObject2D';
 
-    function GameObject2D(id, x, y, vx, vy, rotation, radius) {
+    function GameObject2D(id, x, y, vx, vy, rotation, radius, ax, ay) {
       this.id = id;
       this.x = x != null ? x : 0;
       this.y = y != null ? y : 0;
@@ -1512,13 +1552,13 @@ require.define("/game_object_2d.coffee", function (require, module, exports, __d
       this.vy = vy != null ? vy : 0;
       this.rotation = rotation != null ? rotation : 0;
       this.radius = radius != null ? radius : 0;
+      this.ax = ax != null ? ax : 0;
+      this.ay = ay != null ? ay : 0;
       GameObject2D.__super__.constructor.call(this, this.id);
-      this.ax = 0;
-      this.ay = 0;
     }
 
     GameObject2D.prototype.clone = function() {
-      return new GameObject2D(this.id, this.x, this.y, this.vx, this.vy, this.rotation, this.radius);
+      return new GameObject2D(this.id, this.x, this.y, this.vx, this.vy, this.rotation, this.radius, this.ax, this.ay);
     };
 
     GameObject2D.prototype.setPos = function(x, y) {
@@ -1578,7 +1618,9 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
       this.urls = {
         boat: "boat.png",
         checkpoint0: "checkpoint0.png",
-        checkpoint1: "checkpoint1.png"
+        checkpoint1: "checkpoint1.png",
+        checkpoint_checked0: "checkpoint_checked0.png",
+        checkpoint_checked1: "checkpoint_checked1.png"
       };
       this.numAssets = this.urls.length;
       this.numLoaded = 0;

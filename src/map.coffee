@@ -34,11 +34,8 @@ exports.Map = class Map extends GameObject
 
   clone: -> instance
 
-  update: (dt) ->
+  update: (dt, state) ->
     @waterDt += dt
-    for checkpoint in @checkpoints
-      checkpoint.update dt
-
     if (@waterDt >= 1 / 10)
       @waterDt = 0
       if @isInitialized
@@ -86,8 +83,8 @@ exports.Map = class Map extends GameObject
             context.fillStyle = "rgba(#{r}, #{g}, #{b}, 1)"
             context.fillRect cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
 
-      for checkpoint in @checkpoints
-        checkpoint.draw context
+      # for checkpoint in @checkpoints
+      #   checkpoint.draw context
       context.restore()
 
   drawRegion: (context, options = {}) ->
@@ -109,6 +106,18 @@ exports.Map = class Map extends GameObject
           context.fillStyle = "rgba(#{r}, #{g}, #{b}, 1)"
           context.fillRect cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
       context.restore()
+
+  setRegionDirty: (xStart, yStart, xFinish, yFinish) ->
+    xCellStart = Math.max(0, @.getCellAt(xStart))
+    yCellStart = Math.max(0, @.getCellAt(yStart))
+    xCellFinish = Math.min(@width - 1, @.getCellAt(xFinish))
+    yCellFinish = Math.min(@height - 1, @.getCellAt(yFinish))
+
+    for x in [xCellStart..xCellFinish]
+      for y in [yCellStart..yCellFinish]
+        @cells[x][y].dirty = true
+
+    return true
 
   # collision methods
   # collideWith(obj) expects a GameObject2D instance.
@@ -252,7 +261,10 @@ exports.Map = class Map extends GameObject
         posY = @random.next() % @height
         if (@cells[posX][posY].altitude < @waterLevel)
           hasClearPosition = true
-      @checkpoints.push new Checkpoint(i, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX)
+      ck = new Checkpoint("checkpoint" + i, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX)
+      ck.map = @
+      ck.y += 5
+      @checkpoints.push ck
 
     @isInitialized = true
 
