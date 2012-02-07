@@ -1119,15 +1119,15 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
         }
         this.cells.push(col);
       }
-      this.swipeGaussian(18, 20, 30);
-      this.swipeGaussian(18, 20, 30);
+      this.swipeGaussian(22, 26, 30);
+      this.swipeGaussian(22, 26, 30);
       numGaussians = 1 + this.random.next() % 3;
       for (i = 1; 1 <= numGaussians ? i <= numGaussians : i >= numGaussians; 1 <= numGaussians ? i++ : i--) {
-        this.swipeGaussian(12, 14, 6 + this.random.next() % 15);
+        this.swipeGaussian(12, 18, 10 + this.random.next() % 15);
       }
       numGaussians = 1 + this.random.next() % 4;
       for (i = 1; 1 <= numGaussians ? i <= numGaussians : i >= numGaussians; 1 <= numGaussians ? i++ : i--) {
-        this.swipeGaussian(7, 10, 10);
+        this.swipeGaussian(8, 14, 14);
       }
       for (x = 0, _ref3 = this.width - 1; 0 <= _ref3 ? x <= _ref3 : x >= _ref3; 0 <= _ref3 ? x++ : x--) {
         for (y = 0, _ref4 = this.height - 1; 0 <= _ref4 ? y <= _ref4 : y >= _ref4; 0 <= _ref4 ? y++ : y--) {

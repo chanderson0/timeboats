@@ -232,18 +232,18 @@ exports.Map = class Map extends GameObject
     # raise the terrain by swiping gaussians across it
 
     # first some big wide ones (12, 14, 15)
-    @.swipeGaussian(18, 20, 30)
-    @.swipeGaussian(18, 20, 30)
+    @.swipeGaussian(22, 26, 30)
+    @.swipeGaussian(22, 26, 30)
 
     # now some medium ones (6, 8, 4 + 10)
     numGaussians = 1 + @random.next() % 3
     for i in [1..numGaussians]
-      @.swipeGaussian(12, 14, 6 + @random.next() % 15)
+      @.swipeGaussian(12, 18, 10 + @random.next() % 15)
 
     # finally some narrow tall ones (3, 6, 6)
     numGaussians = 1 + @random.next() % 4
     for i in [1..numGaussians]
-      @.swipeGaussian(7, 10, 10)
+      @.swipeGaussian(8, 14, 14)
 
     # now discretize our altitudes
     # and also make some cells trees.
