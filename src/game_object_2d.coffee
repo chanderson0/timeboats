@@ -18,6 +18,10 @@ exports.GameObject2D = class GameObject2D extends GameObject
     @vx = vx
     @vy = vy
 
+  setAcc: (ax, ay) ->
+    @ax = ax
+    @ay = ay
+
   update: (dt) ->
     newVel = Point.add(@vx, @vy, @ax * dt, @ay * dt)
     @setVel newVel.x, newVel.y

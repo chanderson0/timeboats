@@ -38,12 +38,14 @@ exports.Square = class Square extends GameObject2D
     dir = Point.subtract @destx, @desty, @x, @y
     dist = Point.getLength dir.x, dir.y
 
-    to_move = Point.normalize dir.x, dir.y, Math.sqrt(dist) * dt * 1000
+    to_move = Point.normalize dir.x, dir.y, Math.sqrt(dist) * dt * 5000
     if dist < 0.5
       to_move = {x: 0, y: 0}
       @setPos @destx, @desty
 
-    @setVel to_move.x, to_move.y
+    @setAcc to_move.x, to_move.y
+    @vx *= 0.98
+    @vy *= 0.98
 
     Map.getInstance().collideWith(@, state, true)
 

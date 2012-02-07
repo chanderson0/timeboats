@@ -1571,6 +1571,11 @@ require.define("/game_object_2d.coffee", function (require, module, exports, __d
       return this.vy = vy;
     };
 
+    GameObject2D.prototype.setAcc = function(ax, ay) {
+      this.ax = ax;
+      return this.ay = ay;
+    };
+
     GameObject2D.prototype.update = function(dt) {
       var newPos, newVel;
       newVel = Point.add(this.vx, this.vy, this.ax * dt, this.ay * dt);
@@ -1720,7 +1725,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       var dir, dist, to_move;
       dir = Point.subtract(this.destx, this.desty, this.x, this.y);
       dist = Point.getLength(dir.x, dir.y);
-      to_move = Point.normalize(dir.x, dir.y, Math.sqrt(dist) * dt * 1000);
+      to_move = Point.normalize(dir.x, dir.y, Math.sqrt(dist) * dt * 5000);
       if (dist < 0.5) {
         to_move = {
           x: 0,
@@ -1728,7 +1733,9 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
         };
         this.setPos(this.destx, this.desty);
       }
-      this.setVel(to_move.x, to_move.y);
+      this.setAcc(to_move.x, to_move.y);
+      this.vx *= 0.98;
+      this.vy *= 0.98;
       Map.getInstance().collideWith(this, state, true);
       return Square.__super__.update.call(this, dt, state);
     };
