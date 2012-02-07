@@ -30,6 +30,7 @@ exports.Map = class Map extends GameObject
     @last_computed_damage = 0
     @damages = []
     @checkpoints = []
+    @playerStartPositions = []
     super
 
   clone: -> instance
@@ -207,12 +208,15 @@ exports.Map = class Map extends GameObject
 
 
   # map generation methods
-  # calling generate(seed) should deterministically generate a pseudorandom map based on seed.
 
-  generate: (width, height, seed) ->
+  # width, height measured in cells
+  # seed: int
+  # players: instance of Turns.Game.players
+  generate: (width, height, seed, players) ->
     @width = width
     @height = height
     @random = new Random(seed)
+    @playerStartPositions = []
 
     # initialize a blank map
     @isInitialized = false
@@ -250,23 +254,31 @@ exports.Map = class Map extends GameObject
         @cells[x][y].altitude = Math.floor(@cells[x][y].altitude)
         @cells[x][y].saveInitialState()
 
-    #now add some checkpoints.
+    # now add some checkpoints.
     numCheckpoints = 2 # TODO probably should be configurable from outside the class
     for i in [1..numCheckpoints]
-      hasClearPosition = false
-      posX = 0
-      posY = 0
-      while !hasClearPosition
-        posX = @random.next() % @width
-        posY = @random.next() % @height
-        if (@cells[posX][posY].altitude < @waterLevel)
-          hasClearPosition = true
-      ck = new Checkpoint("checkpoint" + i, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX)
+      ckPosition = @getRandomClearPosition()
+      ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX)
       ck.map = @
       ck.y += 5
       @checkpoints.push ck
 
+    # now figure out where the players should start their turns.
+    for playerId, player of players
+      @playerStartPositions[playerId] = @getRandomClearPosition()
+
     @isInitialized = true
+
+  getRandomClearPosition: ->
+    hasClearPosition = false
+    posX = 0
+    posY = 0
+    while !hasClearPosition
+      posX = @random.next() % @width
+      posY = @random.next() % @height
+      if (@cells[posX][posY].altitude < @waterLevel)
+        hasClearPosition = true
+    return { x: posX, y: posY }
 
   swipeGaussian: (variance, radius, gaussLife) ->
     gaussX = @random.next() % @width

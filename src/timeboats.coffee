@@ -24,7 +24,8 @@ exports.Timeboats = class Timeboats
 
     Map.getInstance().generate @width / Map.CELL_SIZE_PX,
       @height / Map.CELL_SIZE_PX,
-      @game.mapSeed
+      @game.mapSeed,
+      @game.players
 
     for checkpoint in Map.getInstance().checkpoints
       initialState.addObject(checkpoint.id, checkpoint)
@@ -61,7 +62,9 @@ exports.Timeboats = class Timeboats
     console.log oldState, '->', newState
 
     if (oldState == "init" || oldState == "ready") and newState == "recording"
-      player = new Square(@game.next_turn_id, 100, 100, 32, @game.currentPlayer().color)
+      gamePlayer = @game.currentPlayer()
+      startPos = Map.getInstance().playerStartPositions[gamePlayer.id]
+      player = new Square(@game.next_turn_id, startPos.x * Map.CELL_SIZE_PX, startPos.y * Map.CELL_SIZE_PX, 32, gamePlayer.color)
       command = new Command.JoinCommand player.id, player
       @addCommand @command_history, command
       @addCommand @active_commands, command

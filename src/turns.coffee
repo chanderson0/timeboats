@@ -5,7 +5,7 @@ Map = require('./map.coffee').Map
 exports.Player = class Player extends Serializable
   __type: 'Player'
 
-  constructor: (@id = null, @color = "white") -> 
+  constructor: (@id = null, @color = "white") ->
     if not @id?
       @id = UUID.generate()
 
@@ -63,6 +63,8 @@ class GameRenderer
 exports.Game = class Game extends Serializable
   __type: 'Game'
 
+  # players: map<player-id -> Turns.Player>
+  # order: list<player-id>
   constructor: (@id = null, @players = {}, @order = [], @turns = []) ->
     if not @id?
       @id = UUID.generate()
@@ -73,9 +75,9 @@ exports.Game = class Game extends Serializable
     console.log 'constructor'
 
     super
-    
-  afterDeserialize: -> 
-    @next_turn_id = UUID.generate()   
+
+  afterDeserialize: ->
+    @next_turn_id = UUID.generate()
     console.log 'afterDeserialize'
 
   render: =>
@@ -106,7 +108,7 @@ exports.Game = class Game extends Serializable
 
   getTurnByIndex: (idx) ->
     @turns[idx]
-  
+
   latestTurnNumber: ->
     @turns.length - 1
 
@@ -132,7 +134,7 @@ exports.Game = class Game extends Serializable
 
   computeCommands: ->
     return [] if @turns.length == 0
-    
+
     commands = []
     for turn_i in [0..@turn_idx]
       for command_idx in [0...@turns[turn_i].commands.length]

@@ -378,7 +378,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.active_commands = [];
       if (!(this.game.mapSeed != null)) this.game.setMap(new Date().getTime());
       initialState = new State();
-      Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, this.game.mapSeed);
+      Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, this.game.mapSeed, this.game.players);
       _ref = Map.getInstance().checkpoints;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         checkpoint = _ref[_i];
@@ -415,10 +415,12 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.updateState = function(oldState, newState) {
-      var command, player;
+      var command, gamePlayer, player, startPos;
       console.log(oldState, '->', newState);
       if ((oldState === "init" || oldState === "ready") && newState === "recording") {
-        player = new Square(this.game.next_turn_id, 100, 100, 32, this.game.currentPlayer().color);
+        gamePlayer = this.game.currentPlayer();
+        startPos = Map.getInstance().playerStartPositions[gamePlayer.id];
+        player = new Square(this.game.next_turn_id, startPos.x * Map.CELL_SIZE_PX, startPos.y * Map.CELL_SIZE_PX, 32, gamePlayer.color);
         command = new Command.JoinCommand(player.id, player);
         this.addCommand(this.command_history, command);
         this.addCommand(this.active_commands, command);
@@ -846,6 +848,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       this.last_computed_damage = 0;
       this.damages = [];
       this.checkpoints = [];
+      this.playerStartPositions = [];
       Map.__super__.constructor.apply(this, arguments);
     }
 
@@ -1100,11 +1103,12 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       return Math.floor(p / Map.CELL_SIZE_PX);
     };
 
-    Map.prototype.generate = function(width, height, seed) {
-      var ck, col, hasClearPosition, i, numCheckpoints, numGaussians, posX, posY, x, y, _ref, _ref2, _ref3, _ref4;
+    Map.prototype.generate = function(width, height, seed, players) {
+      var ck, ckPosition, col, i, numCheckpoints, numGaussians, player, playerId, x, y, _ref, _ref2, _ref3, _ref4;
       this.width = width;
       this.height = height;
       this.random = new Random(seed);
+      this.playerStartPositions = [];
       this.isInitialized = false;
       this.cells = [];
       this.checkpoints = [];
@@ -1136,22 +1140,35 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       }
       numCheckpoints = 2;
       for (i = 1; 1 <= numCheckpoints ? i <= numCheckpoints : i >= numCheckpoints; 1 <= numCheckpoints ? i++ : i--) {
-        hasClearPosition = false;
-        posX = 0;
-        posY = 0;
-        while (!hasClearPosition) {
-          posX = this.random.next() % this.width;
-          posY = this.random.next() % this.height;
-          if (this.cells[posX][posY].altitude < this.waterLevel) {
-            hasClearPosition = true;
-          }
-        }
-        ck = new Checkpoint("checkpoint" + i, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX);
+        ckPosition = this.getRandomClearPosition();
+        ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX);
         ck.map = this;
         ck.y += 5;
         this.checkpoints.push(ck);
       }
+      for (playerId in players) {
+        player = players[playerId];
+        this.playerStartPositions[playerId] = this.getRandomClearPosition();
+      }
       return this.isInitialized = true;
+    };
+
+    Map.prototype.getRandomClearPosition = function() {
+      var hasClearPosition, posX, posY;
+      hasClearPosition = false;
+      posX = 0;
+      posY = 0;
+      while (!hasClearPosition) {
+        posX = this.random.next() % this.width;
+        posY = this.random.next() % this.height;
+        if (this.cells[posX][posY].altitude < this.waterLevel) {
+          hasClearPosition = true;
+        }
+      }
+      return {
+        x: posX,
+        y: posY
+      };
     };
 
     Map.prototype.swipeGaussian = function(variance, radius, gaussLife) {
