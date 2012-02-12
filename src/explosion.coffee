@@ -1,37 +1,68 @@
 GameObject = require('./game_object.coffee').GameObject
 Point = require('./point.coffee').Point
 Map = require('./map.coffee').Map
+Random = require('./random.coffee').Random
+AssetLoader = require('./asset_loader.coffee').AssetLoader
 
 exports.Explosion = class Explosion extends GameObject
   __type: 'Explosion'
 
   constructor: (@id, @x, @y, @max_radius) ->
     super @id, @x, @y
-    @radius = 0
+    @lifespan = @ttl = 0.4
+    @seed = @x + @y + @id
+    @radius = @max_radius
     Map.getInstance().damageAt @x, @y, @max_radius
 
   clone: ->
     exp = new Explosion @id, @x, @y, @max_radius
-    exp.radius = @radius
+    exp.lifespan = @lifespan
+    exp.ttl = @ttl
     return exp
 
   update: (dt, state) ->
-    @radius += dt * 100
+    @ttl -= dt
 
     for id, object of state.objects
-      if object.__type == 'Square' and Point.getDistance(@x, @y, object.x, object.y) < @radius
+      if object.__type == 'Square' and Point.getDistance(@x, @y, object.x, object.y) < @max_radius
         object.explode state
 
     super dt, state
-    if @radius >= @max_radius
+    if @ttl <= 0
       state.removeObject @id
 
   draw: (context) ->
     context.save()
+
+    random = new Random(@seed)
+    smokePositions = []
+    smokeScales = []
+    smokeTypes = []
+    numSmokes = 10
+    for i in [0..numSmokes - 1]
+      smokePositions.push([ -3.0 + random.nextf() * 6.0, -3.0 + random.nextf() * 6.0 ])
+      smokeVelocity = [ -4.0 + random.nextf() * 8.0, -4.0 + random.nextf() * 8.0 ]
+      smokeTypes.push(random.next() % 3)
+      if smokeTypes[i] < 2
+        smokeScales.push(0.2 + random.nextf() * 0.3)
+      else
+        smokeScales.push(0.1 + random.nextf() * 0.15)
+      for j in [0..((@lifespan - @ttl) * 60 * @lifespan)]
+        smokePositions[i][0] += smokeVelocity[0]
+        smokePositions[i][1] += smokeVelocity[1]
+        smokeScales[i] *= 1.05
+
     context.translate @x, @y
-    context.strokeStyle = "white"
-    context.beginPath()
-    context.arc 0, 0, @radius, 0, Math.PI*2, true
-    context.closePath()
-    context.stroke()
+    context.globalAlpha = 0.7 * (@ttl / @lifespan)
+
+    for i in [0..numSmokes - 1]
+      size = 64 * smokeScales[i]
+      context.drawImage(
+        AssetLoader.getInstance().getAsset("smoke" + smokeTypes[i]),
+        smokePositions[i][0] - size/2,
+        smokePositions[i][1] - size/2,
+        size,
+        size
+      )
+
     context.restore()

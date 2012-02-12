@@ -25,7 +25,7 @@ exports.Square = class Square extends GameObject2D
 
   explode: (state) ->
     id = Math.floor(Math.random() * 1000000)
-    explosion = new Explosion id, @x, @y, 50
+    explosion = new Explosion id, @x, @y, 90
     state.addObject id, explosion
     state.removeObject @id
 

@@ -4,6 +4,7 @@ Command = require('./command.coffee')
 Point = require('./point.coffee').Point
 Map = require('./map.coffee').Map
 AssetLoader = require('./asset_loader.coffee').AssetLoader
+Dock = require('./dock.coffee').Dock
 
 exports.Timeboats = class Timeboats
   constructor: (@game, @context, @width, @height, @api = null, @document = null) ->
@@ -29,6 +30,10 @@ exports.Timeboats = class Timeboats
 
     for checkpoint in Map.getInstance().checkpoints
       initialState.addObject(checkpoint.id, checkpoint)
+
+    for id, position of Map.getInstance().playerStartPositions
+      dock = new Dock("dock" + id, position.x * Map.CELL_SIZE_PX, position.y * Map.CELL_SIZE_PX)
+      initialState.addObject(dock.id, dock)
 
     @frame_history.push initialState
 

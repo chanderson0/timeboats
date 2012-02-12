@@ -10,6 +10,7 @@ exports.Map = class Map extends GameObject
   instance = null
 
   @CELL_SIZE_PX: 8
+  @CLEAR_POSITION_BUFFER_CELLS: 4
 
   #singleton instantiator
   @getInstance: ->
@@ -94,8 +95,8 @@ exports.Map = class Map extends GameObject
 
       startX = Math.max(0, Math.floor(options.region.x / Map.CELL_SIZE_PX))
       startY = Math.max(0, Math.floor(options.region.y / Map.CELL_SIZE_PX))
-      endX   = Math.min(startX + Math.ceil(options.region.width / Map.CELL_SIZE_PX), @width-1)
-      endY   = Math.min(startY + Math.ceil(options.region.height / Map.CELL_SIZE_PX), @width-1)
+      endX   = Math.min(startX + Math.ceil(options.region.width / Map.CELL_SIZE_PX), @width - 1)
+      endY   = Math.min(startY + Math.ceil(options.region.height / Map.CELL_SIZE_PX), @height - 1)
 
       for x in [startX..endX]
         for y in [startY..endY]
@@ -195,7 +196,7 @@ exports.Map = class Map extends GameObject
       for xG in [x - radius..x + radius]
         for yG in [y - radius..y + radius]
             if xG >= 0 and xG < @width and yG >= 0 and yG < @height
-              @cells[xG][yG].altitude -= g.get2d(xG - x, yG - y) * 5.0
+              @cells[xG][yG].altitude -= g.get2d(xG - x, yG - y) * 8.0
               if @cells[xG][yG].altitude < 0
                 @cells[xG][yG].altitude = 0
               if @cells[xG][yG].altitude < @waterLevel
@@ -274,8 +275,8 @@ exports.Map = class Map extends GameObject
     posX = 0
     posY = 0
     while !hasClearPosition
-      posX = @random.next() % @width
-      posY = @random.next() % @height
+      posX = Map.CLEAR_POSITION_BUFFER_CELLS + @random.next() % (@width - 2 * Map.CLEAR_POSITION_BUFFER_CELLS)
+      posY = Map.CLEAR_POSITION_BUFFER_CELLS + @random.next() % (@height - 2 * Map.CLEAR_POSITION_BUFFER_CELLS)
       if (@cells[posX][posY].altitude < @waterLevel)
         hasClearPosition = true
     return { x: posX, y: posY }

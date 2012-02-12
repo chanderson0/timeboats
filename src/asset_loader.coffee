@@ -22,6 +22,12 @@ exports.AssetLoader = class AssetLoader
       checkpoint1: "checkpoint1.png"
       checkpoint_checked0: "checkpoint_checked0.png"
       checkpoint_checked1: "checkpoint_checked1.png"
+      dock: "dock.png"
+      marker0: "marker0.png"
+      marker1: "marker1.png"
+      smoke0: "smoke1.png"
+      smoke1: "smoke2.png"
+      smoke2: "circle4.png"
 
     @numAssets = @urls.length
     @numLoaded = 0
