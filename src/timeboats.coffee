@@ -31,10 +31,6 @@ exports.Timeboats = class Timeboats
     for checkpoint in Map.getInstance().checkpoints
       initialState.addObject(checkpoint.id, checkpoint)
 
-    for id, position of Map.getInstance().playerStartPositions
-      dock = new Dock("dock" + id, position.x * Map.CELL_SIZE_PX, position.y * Map.CELL_SIZE_PX)
-      initialState.addObject(dock.id, dock)
-
     @frame_history.push initialState
 
     @full_redraw = false
@@ -68,8 +64,8 @@ exports.Timeboats = class Timeboats
 
     if (oldState == "init" || oldState == "ready") and newState == "recording"
       gamePlayer = @game.currentPlayer()
-      startPos = Map.getInstance().playerStartPositions[gamePlayer.id]
-      player = new Square(@game.next_turn_id, startPos.x * Map.CELL_SIZE_PX, startPos.y * Map.CELL_SIZE_PX, 32, gamePlayer.color)
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      player = new Square(@game.next_turn_id, startDock.x, startDock.y, 32, gamePlayer.color)
       command = new Command.JoinCommand player.id, player
       @addCommand @command_history, command
       @addCommand @active_commands, command
@@ -243,6 +239,7 @@ exports.Timeboats = class Timeboats
 
       @frame_history[@frame_num].draw @m_context, active: @game.next_turn_id
       @context.drawImage @m_canvas, 0, 0
+    Map.getInstance().drawNonTerrain(@context)
 
   onMouseDown: (e) =>
     if @gamestate == "recording"

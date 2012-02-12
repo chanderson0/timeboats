@@ -10,7 +10,7 @@ exports.Checkpoint = class Checkpoint extends GameObject2D
     @frame = 0
     @dt = 0
     @yInitial = @y
-    @map = null
+    @radius = 30
     @checked = false
 
   clone: ->
@@ -18,7 +18,6 @@ exports.Checkpoint = class Checkpoint extends GameObject2D
     c.frame = @frame
     c.dt = @dt
     c.yInitial = @yInitial
-    c.map = @map
     c.checked = @checked
     return c
 
@@ -28,13 +27,11 @@ exports.Checkpoint = class Checkpoint extends GameObject2D
       @dt = 0
       @frame++
       @frame %= 2
-    if @map?
-      @map.setRegionDirty(@x, @y, @x + 43.5, @y + 48)
 
     @ay = (@yInitial - @y)
 
     for id, object of state.objects
-      if object.__type == 'Square' and Point.getDistance(@x + 21, @y + 24, object.x, object.y) < 20
+      if object.__type == 'Square' and Point.getDistance(@x + 21, @y + 24, object.x, object.y) < @radius
         object.explode state
         @checked = true
 

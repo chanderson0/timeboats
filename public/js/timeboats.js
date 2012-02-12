@@ -362,7 +362,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
   exports.Timeboats = Timeboats = (function() {
 
     function Timeboats(game, context, width, height, api, document) {
-      var checkpoint, dock, id, initialState, position, _i, _len, _ref, _ref2;
+      var checkpoint, initialState, _i, _len, _ref;
       this.game = game;
       this.context = context;
       this.width = width;
@@ -385,12 +385,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         checkpoint = _ref[_i];
         initialState.addObject(checkpoint.id, checkpoint);
-      }
-      _ref2 = Map.getInstance().playerStartPositions;
-      for (id in _ref2) {
-        position = _ref2[id];
-        dock = new Dock("dock" + id, position.x * Map.CELL_SIZE_PX, position.y * Map.CELL_SIZE_PX);
-        initialState.addObject(dock.id, dock);
       }
       this.frame_history.push(initialState);
       this.full_redraw = false;
@@ -423,12 +417,12 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.updateState = function(oldState, newState) {
-      var command, gamePlayer, player, startPos;
+      var command, gamePlayer, player, startDock;
       console.log(oldState, '->', newState);
       if ((oldState === "init" || oldState === "ready") && newState === "recording") {
         gamePlayer = this.game.currentPlayer();
-        startPos = Map.getInstance().playerStartPositions[gamePlayer.id];
-        player = new Square(this.game.next_turn_id, startPos.x * Map.CELL_SIZE_PX, startPos.y * Map.CELL_SIZE_PX, 32, gamePlayer.color);
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        player = new Square(this.game.next_turn_id, startDock.x, startDock.y, 32, gamePlayer.color);
         command = new Command.JoinCommand(player.id, player);
         this.addCommand(this.command_history, command);
         this.addCommand(this.active_commands, command);
@@ -586,7 +580,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       if (!(this.m_canvas != null)) {
         this.context.clearRect(0, 0, this.width + 1, this.height + 1);
         Map.getInstance().draw(this.context);
-        return this.frame_history[this.frame_num].draw(this.context, {
+        this.frame_history[this.frame_num].draw(this.context, {
           active: this.game.next_turn_id
         });
       } else {
@@ -597,8 +591,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.frame_history[this.frame_num].draw(this.m_context, {
           active: this.game.next_turn_id
         });
-        return this.context.drawImage(this.m_canvas, 0, 0);
+        this.context.drawImage(this.m_canvas, 0, 0);
       }
+      return Map.getInstance().drawNonTerrain(this.context);
     };
 
     Timeboats.prototype.onMouseDown = function(e) {
@@ -813,7 +808,7 @@ require.define("/serializable.coffee", function (require, module, exports, __dir
 
 require.define("/map.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var Checkpoint, GameObject, Gaussian, Map, MapCell, Point, Random;
+  var Checkpoint, Dock, GameObject, Gaussian, Map, MapCell, Point, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject = require('./game_object').GameObject;
@@ -827,6 +822,8 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
   Point = require('./point.coffee').Point;
 
   Checkpoint = require('./checkpoint.coffee').Checkpoint;
+
+  Dock = require('./dock.coffee').Dock;
 
   exports.Map = Map = (function() {
     var instance;
@@ -858,7 +855,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       this.last_computed_damage = 0;
       this.damages = [];
       this.checkpoints = [];
-      this.playerStartPositions = [];
+      this.docks = [];
       Map.__super__.constructor.apply(this, arguments);
     }
 
@@ -867,18 +864,23 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.update = function(dt, state) {
-      var alpha, b, g, landAlpha, o_b, o_g, o_r, r, waterAlpha, x, y, _ref, _results;
+      var alpha, b, dock, g, landAlpha, o_b, o_g, o_r, playerId, r, waterAlpha, x, y, _ref, _ref2, _results;
       this.waterDt += dt;
+      _ref = this.docks;
+      for (playerId in _ref) {
+        dock = _ref[playerId];
+        dock.update(dt, state);
+      }
       if (this.waterDt >= 1 / 10) {
         this.waterDt = 0;
         if (this.isInitialized) {
           _results = [];
-          for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
+          for (x = 0, _ref2 = this.width - 1; 0 <= _ref2 ? x <= _ref2 : x >= _ref2; 0 <= _ref2 ? x++ : x--) {
             _results.push((function() {
-              var _ref2, _ref3, _results2;
+              var _ref3, _ref4, _results2;
               _results2 = [];
-              for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
-                _ref3 = this.cells[x][y].getColor(), o_r = _ref3[0], o_g = _ref3[1], o_b = _ref3[2];
+              for (y = 0, _ref3 = this.height - 1; 0 <= _ref3 ? y <= _ref3 : y >= _ref3; 0 <= _ref3 ? y++ : y--) {
+                _ref4 = this.cells[x][y].getColor(), o_r = _ref4[0], o_g = _ref4[1], o_b = _ref4[2];
                 this.cells[x][y].excitement *= 0.9;
                 if (this.random.nextf() > 0.97) {
                   this.cells[x][y].excitement += -0.3 + this.random.nextf() * 0.6;
@@ -932,6 +934,19 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
           }
         }
         return context.restore();
+      }
+    };
+
+    Map.prototype.drawNonTerrain = function(context) {
+      var dock, playerId, _ref, _results;
+      if (this.isInitialized) {
+        _ref = this.docks;
+        _results = [];
+        for (playerId in _ref) {
+          dock = _ref[playerId];
+          _results.push(dock.draw(context));
+        }
+        return _results;
       }
     };
 
@@ -1114,11 +1129,11 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.generate = function(width, height, seed, players) {
-      var ck, ckPosition, col, i, numCheckpoints, numGaussians, player, playerId, x, y, _ref, _ref2, _ref3, _ref4;
+      var ck, ckPosition, clear, col, dock, i, numCheckpoints, numGaussians, player, playerId, x, y, _ref, _ref2, _ref3, _ref4;
       this.width = width;
       this.height = height;
       this.random = new Random(seed);
-      this.playerStartPositions = [];
+      this.docks = [];
       this.isInitialized = false;
       this.cells = [];
       this.checkpoints = [];
@@ -1152,13 +1167,14 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       for (i = 1; 1 <= numCheckpoints ? i <= numCheckpoints : i >= numCheckpoints; 1 <= numCheckpoints ? i++ : i--) {
         ckPosition = this.getRandomClearPosition();
         ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX);
-        ck.map = this;
         ck.y += 5;
         this.checkpoints.push(ck);
       }
       for (playerId in players) {
         player = players[playerId];
-        this.playerStartPositions[playerId] = this.getRandomClearPosition();
+        clear = this.getRandomClearPosition();
+        dock = new Dock("dock" + playerId, clear.x * Map.CELL_SIZE_PX, clear.y * Map.CELL_SIZE_PX);
+        this.docks[playerId] = dock;
       }
       return this.isInitialized = true;
     };
@@ -1171,7 +1187,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       while (!hasClearPosition) {
         posX = Map.CLEAR_POSITION_BUFFER_CELLS + this.random.next() % (this.width - 2 * Map.CLEAR_POSITION_BUFFER_CELLS);
         posY = Map.CLEAR_POSITION_BUFFER_CELLS + this.random.next() % (this.height - 2 * Map.CLEAR_POSITION_BUFFER_CELLS);
-        if (this.cells[posX][posY].altitude < this.waterLevel) {
+        if (this.cells[posX][posY].altitude < this.waterLevel * 0.5) {
           hasClearPosition = true;
         }
       }
@@ -1499,7 +1515,7 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
       this.frame = 0;
       this.dt = 0;
       this.yInitial = this.y;
-      this.map = null;
+      this.radius = 30;
       this.checked = false;
     }
 
@@ -1509,7 +1525,6 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
       c.frame = this.frame;
       c.dt = this.dt;
       c.yInitial = this.yInitial;
-      c.map = this.map;
       c.checked = this.checked;
       return c;
     };
@@ -1522,14 +1537,11 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
         this.frame++;
         this.frame %= 2;
       }
-      if (this.map != null) {
-        this.map.setRegionDirty(this.x, this.y, this.x + 43.5, this.y + 48);
-      }
       this.ay = this.yInitial - this.y;
       _ref = state.objects;
       for (id in _ref) {
         object = _ref[id];
-        if (object.__type === 'Square' && Point.getDistance(this.x + 21, this.y + 24, object.x, object.y) < 20) {
+        if (object.__type === 'Square' && Point.getDistance(this.x + 21, this.y + 24, object.x, object.y) < this.radius) {
           object.explode(state);
           this.checked = true;
         }
@@ -1688,6 +1700,68 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
     };
 
     return AssetLoader;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/dock.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var AssetLoader, Dock, GameObject2D;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
+
+  AssetLoader = require('./asset_loader.coffee').AssetLoader;
+
+  exports.Dock = Dock = (function() {
+
+    __extends(Dock, GameObject2D);
+
+    Dock.prototype.__type = 'Dock';
+
+    function Dock(id, x, y) {
+      this.id = id;
+      this.x = x;
+      this.y = y;
+      Dock.__super__.constructor.call(this, this.id, this.x, this.y);
+      this.frame = 0;
+      this.dt = 0;
+      this.alpha = 1;
+      this.radius = 48;
+    }
+
+    Dock.prototype.clone = function() {
+      var c;
+      c = new Dock(this.id, this.x, this.y);
+      c.frame = this.frame;
+      c.dt = this.dt;
+      c.alpha = this.alpha;
+      return c;
+    };
+
+    Dock.prototype.update = function(dt, state) {
+      this.dt += dt;
+      if (this.dt >= 0.4) {
+        this.dt = 0;
+        this.frame++;
+        this.frame %= 2;
+      }
+      if (this.alpha > 0.5) this.alpha -= 0.25 * dt;
+      return Dock.__super__.update.call(this, dt);
+    };
+
+    Dock.prototype.draw = function(context) {
+      context.save();
+      context.globalAlpha = this.alpha;
+      context.drawImage(AssetLoader.getInstance().getAsset("dock"), this.x - 38, this.y - 23, 76, 46);
+      context.drawImage(AssetLoader.getInstance().getAsset("marker" + this.frame), this.x - 30, this.y - 32, 44, 43);
+      return context.restore();
+    };
+
+    return Dock;
 
   })();
 
@@ -1988,68 +2062,6 @@ require.define("/command.coffee", function (require, module, exports, __dirname,
   exports.JoinCommand = JoinCommand;
 
   exports.ExplodeCommand = ExplodeCommand;
-
-}).call(this);
-
-});
-
-require.define("/dock.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var AssetLoader, Dock, GameObject2D;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
-
-  AssetLoader = require('./asset_loader.coffee').AssetLoader;
-
-  exports.Dock = Dock = (function() {
-
-    __extends(Dock, GameObject2D);
-
-    Dock.prototype.__type = 'Dock';
-
-    function Dock(id, x, y) {
-      this.id = id;
-      this.x = x;
-      this.y = y;
-      Dock.__super__.constructor.call(this, this.id, this.x, this.y);
-      this.frame = 0;
-      this.dt = 0;
-      this.alpha = 1;
-      this.radius = 48;
-    }
-
-    Dock.prototype.clone = function() {
-      var c;
-      c = new Dock(this.id, this.x, this.y);
-      c.frame = this.frame;
-      c.dt = this.dt;
-      c.alpha = this.alpha;
-      return c;
-    };
-
-    Dock.prototype.update = function(dt, state) {
-      this.dt += dt;
-      if (this.dt >= 0.4) {
-        this.dt = 0;
-        this.frame++;
-        this.frame %= 2;
-      }
-      if (this.alpha > 0.5) this.alpha -= 0.25 * dt;
-      return Dock.__super__.update.call(this, dt);
-    };
-
-    Dock.prototype.draw = function(context) {
-      context.save();
-      context.globalAlpha = this.alpha;
-      context.drawImage(AssetLoader.getInstance().getAsset("dock"), this.x - 38, this.y - 23, 76, 46);
-      context.drawImage(AssetLoader.getInstance().getAsset("marker" + this.frame), this.x - 60, this.y - 56, 73, 113);
-      return context.restore();
-    };
-
-    return Dock;
-
-  })();
 
 }).call(this);
 
