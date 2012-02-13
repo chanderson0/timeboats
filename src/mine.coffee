@@ -9,7 +9,7 @@ exports.Mine = class Mine extends GameObject2D
   constructor: (@id, @x, @y) ->
     super @id, @x, @y
     @frame = 0
-    @dt = new Random(@x + @y).nextf() * 0.15
+    @dt = new Random(@x + @y).nextf()
     @radius = 15
 
   clone: ->

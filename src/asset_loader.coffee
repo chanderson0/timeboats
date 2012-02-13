@@ -17,7 +17,6 @@ exports.AssetLoader = class AssetLoader
     # add images here: key -> url.
     # use getAsset(key) to access them later.
     @urls =
-      boat: "boat.png"
       checkpoint0: "checkpoint0.png"
       checkpoint1: "checkpoint1.png"
       checkpoint_checked0: "checkpoint_checked0.png"

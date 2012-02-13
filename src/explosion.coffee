@@ -24,8 +24,13 @@ exports.Explosion = class Explosion extends GameObject2D
     @ttl -= dt
 
     for id, object of state.objects
-      if object.__type == 'Square' and Point.getDistance(@x, @y, object.x, object.y) < @max_radius
-        object.explode state
+      if object.__type == 'Square'
+        dist = Point.getDistance(@x, @y, object.x, object.y)
+        if dist < @max_radius * 0.3
+          object.explode state
+        else if dist < @max_radius
+          object.vx += (object.x - @x) * 0.25
+          object.vy += (object.y - @y) * 0.25
 
     super dt, state
     if @ttl <= 0
@@ -42,7 +47,7 @@ exports.Explosion = class Explosion extends GameObject2D
     for i in [0..numSmokes - 1]
       smokePositions.push([ -3.0 + random.nextf() * 6.0, -3.0 + random.nextf() * 6.0 ])
       smokeVelocity = [ -4.0 + random.nextf() * 8.0, -4.0 + random.nextf() * 8.0 ]
-      smokeTypes.push(random.next() % 3)
+      smokeTypes.push(Math.floor(random.next() % 3))
       if smokeTypes[i] < 2
         smokeScales.push(0.2 + random.nextf() * 0.3)
       else

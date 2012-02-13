@@ -1752,7 +1752,6 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
       this.assets = [];
       this.loaded = [];
       this.urls = {
-        boat: "boat.png",
         checkpoint0: "checkpoint0.png",
         checkpoint1: "checkpoint1.png",
         checkpoint_checked0: "checkpoint_checked0.png",
@@ -1913,7 +1912,7 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
       this.y = y;
       Mine.__super__.constructor.call(this, this.id, this.x, this.y);
       this.frame = 0;
-      this.dt = new Random(this.x + this.y).nextf() * 0.15;
+      this.dt = new Random(this.x + this.y).nextf();
       this.radius = 15;
     }
 
@@ -2097,13 +2096,19 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
     };
 
     Explosion.prototype.update = function(dt, state) {
-      var id, object, _ref;
+      var dist, id, object, _ref;
       this.ttl -= dt;
       _ref = state.objects;
       for (id in _ref) {
         object = _ref[id];
-        if (object.__type === 'Square' && Point.getDistance(this.x, this.y, object.x, object.y) < this.max_radius) {
-          object.explode(state);
+        if (object.__type === 'Square') {
+          dist = Point.getDistance(this.x, this.y, object.x, object.y);
+          if (dist < this.max_radius * 0.3) {
+            object.explode(state);
+          } else if (dist < this.max_radius) {
+            object.vx += (object.x - this.x) * 0.25;
+            object.vy += (object.y - this.y) * 0.25;
+          }
         }
       }
       Explosion.__super__.update.call(this, dt, state);
@@ -2121,7 +2126,7 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
       for (i = 0, _ref = numSmokes - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
         smokePositions.push([-3.0 + random.nextf() * 6.0, -3.0 + random.nextf() * 6.0]);
         smokeVelocity = [-4.0 + random.nextf() * 8.0, -4.0 + random.nextf() * 8.0];
-        smokeTypes.push(random.next() % 3);
+        smokeTypes.push(Math.floor(random.next() % 3));
         if (smokeTypes[i] < 2) {
           smokeScales.push(0.2 + random.nextf() * 0.3);
         } else {
