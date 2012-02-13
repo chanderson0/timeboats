@@ -33,5 +33,5 @@ exports.Dock = class Dock extends GameObject2D
     context.save()
     context.globalAlpha = @alpha
     context.drawImage(AssetLoader.getInstance().getAsset("dock"), @x - 38, @y - 23, 76, 46)
-    context.drawImage(AssetLoader.getInstance().getAsset("marker" + @frame), @x - 60, @y - 56, 73, 113)
+    context.drawImage(AssetLoader.getInstance().getAsset("marker" + @frame), @x - 30, @y - 32, 44, 43)
     context.restore()

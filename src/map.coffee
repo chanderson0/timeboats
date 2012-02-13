@@ -4,6 +4,7 @@ Random = require('./random.coffee').Random
 Gaussian = require('./gaussian.coffee').Gaussian
 Point = require('./point.coffee').Point
 Checkpoint = require('./checkpoint.coffee').Checkpoint
+Dock = require('./dock.coffee').Dock
 
 exports.Map = class Map extends GameObject
   __type: 'Map'
@@ -31,13 +32,16 @@ exports.Map = class Map extends GameObject
     @last_computed_damage = 0
     @damages = []
     @checkpoints = []
-    @playerStartPositions = []
+    @docks = []
     super
 
   clone: -> instance
 
   update: (dt, state) ->
     @waterDt += dt
+    for playerId, dock of @docks
+      dock.update(dt, state)
+
     if (@waterDt >= 1 / 10)
       @waterDt = 0
       if @isInitialized
@@ -85,9 +89,12 @@ exports.Map = class Map extends GameObject
             context.fillStyle = "rgba(#{r}, #{g}, #{b}, 1)"
             context.fillRect cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
 
-      # for checkpoint in @checkpoints
-      #   checkpoint.draw context
       context.restore()
+
+  drawNonTerrain: (context) ->
+    if @isInitialized
+      for playerId, dock of @docks
+        dock.draw(context)
 
   drawRegion: (context, options = {}) ->
     if @isInitialized
@@ -221,7 +228,7 @@ exports.Map = class Map extends GameObject
     @width = width
     @height = height
     @random = new Random(seed)
-    @playerStartPositions = []
+    @docks = []
 
     # initialize a blank map
     @isInitialized = false
@@ -264,13 +271,14 @@ exports.Map = class Map extends GameObject
     for i in [1..numCheckpoints]
       ckPosition = @getRandomClearPosition()
       ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX)
-      ck.map = @
       ck.y += 5
       @checkpoints.push ck
 
     # now figure out where the players should start their turns.
     for playerId, player of players
-      @playerStartPositions[playerId] = @getRandomClearPosition()
+      clear = @getRandomClearPosition()
+      dock = new Dock("dock" + playerId, clear.x * Map.CELL_SIZE_PX, clear.y * Map.CELL_SIZE_PX)
+      @docks[playerId] = dock
 
     @isInitialized = true
 
@@ -281,7 +289,7 @@ exports.Map = class Map extends GameObject
     while !hasClearPosition
       posX = Map.CLEAR_POSITION_BUFFER_CELLS + @random.next() % (@width - 2 * Map.CLEAR_POSITION_BUFFER_CELLS)
       posY = Map.CLEAR_POSITION_BUFFER_CELLS + @random.next() % (@height - 2 * Map.CLEAR_POSITION_BUFFER_CELLS)
-      if (@cells[posX][posY].altitude < @waterLevel)
+      if (@cells[posX][posY].altitude < @waterLevel * 0.5)
         hasClearPosition = true
     return { x: posX, y: posY }
 
