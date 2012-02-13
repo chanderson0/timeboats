@@ -362,7 +362,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
   exports.Timeboats = Timeboats = (function() {
 
     function Timeboats(game, context, width, height, api, document) {
-      var checkpoint, initialState, _i, _len, _ref;
+      var checkpoint, gamePlayer, initialState, startDock, _i, _len, _ref;
       this.game = game;
       this.context = context;
       this.width = width;
@@ -398,6 +398,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.m_canvas = null;
       }
       AssetLoader.getInstance().load();
+      gamePlayer = this.game.currentPlayer();
+      startDock = Map.getInstance().docks[gamePlayer.id];
+      startDock.active = true;
       this.game.render();
     }
 
@@ -428,6 +431,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         command = new Command.JoinCommand(player.id, player);
         this.addCommand(this.command_history, command);
         this.addCommand(this.active_commands, command);
+        startDock.active = false;
         this.gamestate = "recording";
         $("#playbutton").html("Stop");
         $("#playbutton").prop("disabled", true);
@@ -456,6 +460,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.game.recordTurn(this.active_commands);
         this.active_commands = [];
         this.game.nextTurn();
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        startDock.active = true;
         this.setFrameNum(0);
         this.full_redraw = true;
         if (this.api != null) {
@@ -1769,6 +1776,7 @@ require.define("/dock.coffee", function (require, module, exports, __dirname, __
       this.dt = 0;
       this.alpha = 1;
       this.radius = 48;
+      this.active = false;
     }
 
     Dock.prototype.clone = function() {
@@ -1784,8 +1792,10 @@ require.define("/dock.coffee", function (require, module, exports, __dirname, __
       this.dt += dt;
       if (this.dt >= 0.4) {
         this.dt = 0;
-        this.frame++;
-        this.frame %= 2;
+        if (this.active) {
+          this.frame++;
+          this.frame %= 2;
+        }
       }
       if (this.alpha > 0.5) this.alpha -= 0.25 * dt;
       return Dock.__super__.update.call(this, dt);
@@ -1793,7 +1803,6 @@ require.define("/dock.coffee", function (require, module, exports, __dirname, __
 
     Dock.prototype.draw = function(context) {
       context.save();
-      context.globalAlpha = this.alpha;
       context.drawImage(AssetLoader.getInstance().getAsset("dock"), this.x - 38, this.y - 23, 76, 46);
       context.drawImage(AssetLoader.getInstance().getAsset("marker" + this.frame), this.x - 30, this.y - 32, 44, 43);
       return context.restore();

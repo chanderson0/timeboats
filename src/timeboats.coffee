@@ -45,6 +45,10 @@ exports.Timeboats = class Timeboats
 
     AssetLoader.getInstance().load()
 
+    gamePlayer = @game.currentPlayer()
+    startDock = Map.getInstance().docks[gamePlayer.id]
+    startDock.active = true
+
     @game.render()
 
   playClick: ->
@@ -72,6 +76,8 @@ exports.Timeboats = class Timeboats
       command = new Command.JoinCommand player.id, player
       @addCommand @command_history, command
       @addCommand @active_commands, command
+
+      startDock.active = false
 
       @gamestate = "recording"
 
@@ -106,6 +112,10 @@ exports.Timeboats = class Timeboats
       @game.recordTurn @active_commands
       @active_commands = []
       @game.nextTurn()
+
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      startDock.active = true
 
       @setFrameNum(0)
       @full_redraw = true
