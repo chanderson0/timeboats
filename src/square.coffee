@@ -7,7 +7,7 @@ AssetLoader = require('./asset_loader.coffee').AssetLoader
 exports.Square = class Square extends GameObject2D
   __type: 'Square'
 
-  constructor: (@id, @x, @y, @size, @fill = "white") ->
+  constructor: (@id, @x, @y, @size, @color = 0) ->
     super @id, @x, @y, 0, 0, -1.57
 
     @destx = @x
@@ -15,7 +15,7 @@ exports.Square = class Square extends GameObject2D
     @radius = @size / 2
 
   clone: ->
-    sq = new Square @id, @x, @y, @size, @fill
+    sq = new Square @id, @x, @y, @size, @color
     sq.rotation = @rotation
     sq.vx = @vx
     sq.vy = @vy
@@ -56,11 +56,9 @@ exports.Square = class Square extends GameObject2D
     if options? and options.dim
       context.globalAlpha = 0.5
 
-    context.fillStyle = @fill
     context.translate @x, @y
     context.rotate @rotation
-    # context.fillRect -@size/2, -@size/2, @size, @size
-    context.drawImage(AssetLoader.getInstance().getAsset("boat"), -@size/2, -@size/2, @size, @size)
+    context.drawImage(AssetLoader.getInstance().getAsset("boat" + @color), -@size/2, -@size/2, @size, @size)
     context.restore()
 
   collide: (state) ->

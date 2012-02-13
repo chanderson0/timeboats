@@ -1733,7 +1733,11 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
         smoke1: "smoke2.png",
         smoke2: "circle4.png",
         mine0: "mine0.png",
-        mine1: "mine1.png"
+        mine1: "mine1.png",
+        boat0: "boat0.png",
+        boat1: "boat1.png",
+        boat2: "boat2.png",
+        boat3: "boat3.png"
       };
       this.numAssets = this.urls.length;
       this.numLoaded = 0;
@@ -1923,12 +1927,12 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 
     Square.prototype.__type = 'Square';
 
-    function Square(id, x, y, size, fill) {
+    function Square(id, x, y, size, color) {
       this.id = id;
       this.x = x;
       this.y = y;
       this.size = size;
-      this.fill = fill != null ? fill : "white";
+      this.color = color != null ? color : 0;
       Square.__super__.constructor.call(this, this.id, this.x, this.y, 0, 0, -1.57);
       this.destx = this.x;
       this.desty = this.y;
@@ -1937,7 +1941,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 
     Square.prototype.clone = function() {
       var sq;
-      sq = new Square(this.id, this.x, this.y, this.size, this.fill);
+      sq = new Square(this.id, this.x, this.y, this.size, this.color);
       sq.rotation = this.rotation;
       sq.vx = this.vx;
       sq.vy = this.vy;
@@ -1983,10 +1987,9 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
     Square.prototype.draw = function(context, options) {
       context.save();
       if ((options != null) && options.dim) context.globalAlpha = 0.5;
-      context.fillStyle = this.fill;
       context.translate(this.x, this.y);
       context.rotate(this.rotation);
-      context.drawImage(AssetLoader.getInstance().getAsset("boat"), -this.size / 2, -this.size / 2, this.size, this.size);
+      context.drawImage(AssetLoader.getInstance().getAsset("boat" + this.color), -this.size / 2, -this.size / 2, this.size, this.size);
       return context.restore();
     };
 
@@ -2278,7 +2281,7 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
 
     function Player(id, color) {
       this.id = id != null ? id : null;
-      this.color = color != null ? color : "white";
+      this.color = color != null ? color : 0;
       if (!(this.id != null)) this.id = UUID.generate();
       Player.__super__.constructor.apply(this, arguments);
     }
@@ -3460,8 +3463,8 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     $('#newgame').click(function() {
       var order, player1, player2, players;
       render = false;
-      player1 = new Turns.Player(1, "white");
-      player2 = new Turns.Player(2, "red");
+      player1 = new Turns.Player(1, 0);
+      player2 = new Turns.Player(2, 1);
       players = {
         1: player1,
         2: player2
