@@ -41,6 +41,6 @@ exports.Mine = class Mine extends GameObject2D
 
   draw: (context) ->
     if @isGold
-      context.drawImage(AssetLoader.getInstance().getAsset("gold"), @x - 5, @y - 3, 37,27)
+      context.drawImage(AssetLoader.getInstance().getAsset("gold"), @x - 5, @y, 37,27)
     else
       context.drawImage(AssetLoader.getInstance().getAsset("mine" + @frame), @x, @y, 31, 31)
