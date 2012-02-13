@@ -1,10 +1,9 @@
 {
-    "name": "Time Boats",
+    "name": "Paradocks",
     "version": "0.1",
     "icon-19x19": "img/icon19.png",
     "icon-29x29": "img/icon29.png",
     "icon-42x42": "img/icon42.png",
-    "description": "Time boats in Pokki.",
-    "popup": "popup.html",
-    "default_popup_size": "1024,800"
+    "description": "Paradocks in Pokki.",
+    "popup": "popup.html"
 }

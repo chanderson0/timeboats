@@ -2,11 +2,13 @@ html, body {
   background: url('../img/sand.png') top left repeat;
   text-align: center;
   font-family: Verdana, sans-serif;
+  width: 1054px;
+  height: 627px;
 }
 
 #container {
   width: 1024px;
-  margin: 20px auto;
+  margin: 15px auto;
   text-align: left;
 }
 

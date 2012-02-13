@@ -3631,7 +3631,7 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
 
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var API, MenuBoats, Timeboats, Turns, UUID, async, drawGames, timestamp;
+  var API, MenuBoats, Timeboats, Turns, UUID, async, drawGames, loaded, timestamp;
 
   Timeboats = require('./timeboats.coffee').Timeboats;
 
@@ -3666,7 +3666,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     });
   };
 
-  window.onload = function() {
+  loaded = function() {
     var api, dt, frame, frame_num, game, game_canvas, game_context, gdt, last, menu_boats, menu_canvas, menu_context, rdt, render, render_menu, timeboats;
     var _this = this;
     menu_canvas = $('#menu-canvas')[0];
@@ -3678,6 +3678,9 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     render_menu = true;
     $("#menu-canvas").fadeIn();
     $("#menu").fadeIn();
+    if (typeof pokki !== "undefined" && pokki !== null) {
+      pokki.setPopupClientSize(1054, 627);
+    }
     game = null;
     timeboats = null;
     render = false;
@@ -3828,6 +3831,23 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     };
     return frame();
   };
+
+  if (typeof pokki !== "undefined" && pokki !== null) {
+    pokki.addEventListener('popup_showing', function() {
+      return console.log('is showing');
+    });
+    pokki.addEventListener('popup_shown', function() {
+      console.log("The popup is now shown!");
+      return loaded();
+    });
+    pokki.addEventListener('popup_hidden', function() {
+      return console.log("The popup was closed.");
+    });
+  } else {
+    window.onload = function() {
+      return loaded();
+    };
+  }
 
 }).call(this);
 

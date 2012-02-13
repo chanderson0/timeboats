@@ -20,8 +20,7 @@ drawGames = (game_ids, games, api) ->
     id = $(e.target).attr('data')
     window.gameClicked id
 
-# Setup.
-window.onload = ->
+loaded = ->
   menu_canvas = $('#menu-canvas')[0]
   menu_context = menu_canvas.getContext '2d'
 
@@ -34,6 +33,8 @@ window.onload = ->
   render_menu = true
   $("#menu-canvas").fadeIn()
   $("#menu").fadeIn()
+  if pokki?
+    pokki.setPopupClientSize 1054, 627
 
   game = null
   timeboats = null
@@ -57,6 +58,9 @@ window.onload = ->
 
     $("#menu-canvas").fadeOut 1000
     $("#menu").fadeOut 1000, =>
+      # if pokki?
+      #   pokki.setPopupClientSize 1054, 627
+
       render = true
       render_menu = false
       $("#buttons").hide()
@@ -117,6 +121,8 @@ window.onload = ->
 
    $('#gameover .back').click =>
     $("#buttons button").prop "disabled", false
+    # if pokki?
+    #     pokki.setPopupClientSize 750, 590
     $("#gameover").fadeOut 1000, ->
       $("#buttons").fadeIn 1000
 
@@ -185,3 +191,19 @@ window.onload = ->
     requestAnimationFrame frame
 
   frame()
+
+# Setup.
+if pokki?
+  pokki.addEventListener 'popup_showing', ->
+    console.log 'is showing'
+
+  pokki.addEventListener 'popup_shown', -> 
+    console.log "The popup is now shown!"
+    loaded()
+
+  pokki.addEventListener 'popup_hidden', ->
+    console.log "The popup was closed."
+else
+  window.onload = ->
+    loaded()
+
