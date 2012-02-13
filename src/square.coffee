@@ -12,7 +12,8 @@ exports.Square = class Square extends GameObject2D
 
     @destx = @x
     @desty = @y
-    @radius = @size / 2
+    @radius = (@size / 2) - 5
+    @invincibleTime = 1.0
 
   clone: ->
     sq = new Square @id, @x, @y, @size, @color
@@ -21,9 +22,12 @@ exports.Square = class Square extends GameObject2D
     sq.vy = @vy
     sq.destx = @destx
     sq.desty = @desty
+    sq.invincibleTime = @invincibleTime
     return sq
 
   explode: (state) ->
+    if @invincibleTime > 0
+      return
     id = Math.floor(Math.random() * 1000000)
     explosion = new Explosion id, @x, @y, 90
     state.addObject id, explosion
@@ -38,6 +42,8 @@ exports.Square = class Square extends GameObject2D
   update: (dt, state) ->
     dir = Point.subtract @destx, @desty, @x, @y
     dist = Point.getLength dir.x, dir.y
+    if @invincibleTime > 0
+      @invincibleTime -= 0.7 * dt
 
     to_move = Point.normalize dir.x, dir.y, Math.sqrt(dist) * dt * 5000
     if dist < 0.5
@@ -53,6 +59,8 @@ exports.Square = class Square extends GameObject2D
     super dt, state
 
   draw: (context, options) ->
+    if @invincibleTime > 0 and (Math.floor(@invincibleTime * 15) % 2 == 1)
+      return
     context.save()
     if options? and options.dim
       context.globalAlpha = 0.5

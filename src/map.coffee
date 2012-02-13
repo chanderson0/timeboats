@@ -269,38 +269,68 @@ exports.Map = class Map extends GameObject
         @cells[x][y].altitude = Math.floor(@cells[x][y].altitude)
         @cells[x][y].saveInitialState()
 
+    collisionObjects = []
+
+    # now figure out where the players should start their turns.
+    quadrantOffset = @random.next() % 4
+    for playerId, player of players
+      clear = @getRandomClearPositionInQuadrant(player.color + quadrantOffset)
+      dock = new Dock("dock" + playerId, clear.x * Map.CELL_SIZE_PX, clear.y * Map.CELL_SIZE_PX, player.color)
+      @docks[playerId] = dock
+      collisionObjects.push dock
+
     # now add some checkpoints.
-    numCheckpoints = 2 # TODO probably should be configurable from outside the class
+    numCheckpoints = 3 # TODO probably should be configurable from outside the class
     for i in [1..numCheckpoints]
-      ckPosition = @getRandomClearPosition()
+      ckPosition = @getRandomClearPosition(collisionObjects)
       ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX)
       ck.y += 5
       @checkpoints.push ck
+      collisionObjects.push ck
 
     # now add some mines.
-    numMines = 12
+    numMines = 8
     for i in [1..numMines]
-      mPosition = @getRandomClearPosition()
+      mPosition = @getRandomClearPosition(collisionObjects)
       m = new Mine("mine" + i, mPosition.x * Map.CELL_SIZE_PX, mPosition.y * Map.CELL_SIZE_PX)
       @mines.push m
 
-    # now figure out where the players should start their turns.
-    for playerId, player of players
-      clear = @getRandomClearPosition()
-      dock = new Dock("dock" + playerId, clear.x * Map.CELL_SIZE_PX, clear.y * Map.CELL_SIZE_PX, player.color)
-      @docks[playerId] = dock
-
     @isInitialized = true
 
-  getRandomClearPosition: ->
+  getRandomClearPosition: (existingObjects) ->
     hasClearPosition = false
     posX = 0
     posY = 0
     while !hasClearPosition
       posX = Map.CLEAR_POSITION_BUFFER_CELLS + @random.next() % (@width - 2 * Map.CLEAR_POSITION_BUFFER_CELLS)
       posY = Map.CLEAR_POSITION_BUFFER_CELLS + @random.next() % (@height - 2 * Map.CLEAR_POSITION_BUFFER_CELLS)
-      if (@cells[posX][posY].altitude < @waterLevel * 0.5)
+      if (@cells[posX][posY].altitude == 0)
         hasClearPosition = true
+        for object in existingObjects
+          if Point.getDistance(object.x, object.y, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX) <= object.radius
+            hasClearPosition = false
+            break
+    return { x: posX, y: posY }
+
+  getRandomClearPositionInQuadrant: (quadrant) ->
+    quadrant = Math.floor(quadrant) % 4
+    hasClearPosition = false
+    posX = 0
+    posY = 0
+    halfWidth = @width / 2
+    halfHeight = @height / 2
+    while !hasClearPosition
+      posX = Map.CLEAR_POSITION_BUFFER_CELLS + @random.next() % (@width - 2 * Map.CLEAR_POSITION_BUFFER_CELLS)
+      posY = Map.CLEAR_POSITION_BUFFER_CELLS + @random.next() % (@height - 2 * Map.CLEAR_POSITION_BUFFER_CELLS)
+      if (@cells[posX][posY].altitude == 0)
+        if quadrant == 0 and posX > halfWidth and posY < halfHeight
+          hasClearPosition = true
+        else if quadrant == 1 and posX < halfWidth and posY < halfHeight
+          hasClearPosition = true
+        else if quadrant == 2 and posX < halfWidth and posY > halfHeight
+          hasClearPosition = true
+        else if quadrant == 3 and posX > halfWidth and posY > halfHeight
+          hasClearPosition = true
     return { x: posX, y: posY }
 
   swipeGaussian: (variance, radius, gaussLife) ->

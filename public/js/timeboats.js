@@ -1251,7 +1251,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.generate = function(width, height, seed, players) {
-      var ck, ckPosition, clear, col, dock, i, m, mPosition, numCheckpoints, numGaussians, numMines, player, playerId, x, y, _ref, _ref2, _ref3, _ref4;
+      var ck, ckPosition, clear, col, collisionObjects, dock, i, m, mPosition, numCheckpoints, numGaussians, numMines, player, playerId, quadrantOffset, x, y, _ref, _ref2, _ref3, _ref4;
       this.width = width;
       this.height = height;
       this.random = new Random(seed);
@@ -1286,38 +1286,78 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
           this.cells[x][y].saveInitialState();
         }
       }
-      numCheckpoints = 2;
+      collisionObjects = [];
+      quadrantOffset = this.random.next() % 4;
+      for (playerId in players) {
+        player = players[playerId];
+        clear = this.getRandomClearPositionInQuadrant(player.color + quadrantOffset);
+        dock = new Dock("dock" + playerId, clear.x * Map.CELL_SIZE_PX, clear.y * Map.CELL_SIZE_PX, player.color);
+        this.docks[playerId] = dock;
+        collisionObjects.push(dock);
+      }
+      numCheckpoints = 3;
       for (i = 1; 1 <= numCheckpoints ? i <= numCheckpoints : i >= numCheckpoints; 1 <= numCheckpoints ? i++ : i--) {
-        ckPosition = this.getRandomClearPosition();
+        ckPosition = this.getRandomClearPosition(collisionObjects);
         ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX);
         ck.y += 5;
         this.checkpoints.push(ck);
+        collisionObjects.push(ck);
       }
-      numMines = 1;
+      numMines = 8;
       for (i = 1; 1 <= numMines ? i <= numMines : i >= numMines; 1 <= numMines ? i++ : i--) {
-        mPosition = this.getRandomClearPosition();
+        mPosition = this.getRandomClearPosition(collisionObjects);
         m = new Mine("mine" + i, mPosition.x * Map.CELL_SIZE_PX, mPosition.y * Map.CELL_SIZE_PX);
         this.mines.push(m);
-      }
-      for (playerId in players) {
-        player = players[playerId];
-        clear = this.getRandomClearPosition();
-        dock = new Dock("dock" + playerId, clear.x * Map.CELL_SIZE_PX, clear.y * Map.CELL_SIZE_PX, player.color);
-        this.docks[playerId] = dock;
       }
       return this.isInitialized = true;
     };
 
-    Map.prototype.getRandomClearPosition = function() {
-      var hasClearPosition, posX, posY;
+    Map.prototype.getRandomClearPosition = function(existingObjects) {
+      var hasClearPosition, object, posX, posY, _i, _len;
       hasClearPosition = false;
       posX = 0;
       posY = 0;
       while (!hasClearPosition) {
         posX = Map.CLEAR_POSITION_BUFFER_CELLS + this.random.next() % (this.width - 2 * Map.CLEAR_POSITION_BUFFER_CELLS);
         posY = Map.CLEAR_POSITION_BUFFER_CELLS + this.random.next() % (this.height - 2 * Map.CLEAR_POSITION_BUFFER_CELLS);
-        if (this.cells[posX][posY].altitude < this.waterLevel * 0.5) {
+        if (this.cells[posX][posY].altitude === 0) {
           hasClearPosition = true;
+          for (_i = 0, _len = existingObjects.length; _i < _len; _i++) {
+            object = existingObjects[_i];
+            if (Point.getDistance(object.x, object.y, posX * Map.CELL_SIZE_PX, posY * Map.CELL_SIZE_PX) <= object.radius) {
+              hasClearPosition = false;
+              break;
+            }
+          }
+        }
+      }
+      return {
+        x: posX,
+        y: posY
+      };
+    };
+
+    Map.prototype.getRandomClearPositionInQuadrant = function(quadrant) {
+      var halfHeight, halfWidth, hasClearPosition, posX, posY;
+      quadrant = Math.floor(quadrant) % 4;
+      hasClearPosition = false;
+      posX = 0;
+      posY = 0;
+      halfWidth = this.width / 2;
+      halfHeight = this.height / 2;
+      while (!hasClearPosition) {
+        posX = Map.CLEAR_POSITION_BUFFER_CELLS + this.random.next() % (this.width - 2 * Map.CLEAR_POSITION_BUFFER_CELLS);
+        posY = Map.CLEAR_POSITION_BUFFER_CELLS + this.random.next() % (this.height - 2 * Map.CLEAR_POSITION_BUFFER_CELLS);
+        if (this.cells[posX][posY].altitude === 0) {
+          if (quadrant === 0 && posX > halfWidth && posY < halfHeight) {
+            hasClearPosition = true;
+          } else if (quadrant === 1 && posX < halfWidth && posY < halfHeight) {
+            hasClearPosition = true;
+          } else if (quadrant === 2 && posX < halfWidth && posY > halfHeight) {
+            hasClearPosition = true;
+          } else if (quadrant === 3 && posX > halfWidth && posY > halfHeight) {
+            hasClearPosition = true;
+          }
         }
       }
       return {
@@ -2035,7 +2075,7 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
 
     Mine.prototype.draw = function(context) {
       if (this.isGold) {
-        return context.drawImage(AssetLoader.getInstance().getAsset("gold"), this.x - 5, this.y - 3, 37, 27);
+        return context.drawImage(AssetLoader.getInstance().getAsset("gold"), this.x - 5, this.y, 37, 27);
       } else {
         return context.drawImage(AssetLoader.getInstance().getAsset("mine" + this.frame), this.x, this.y, 31, 31);
       }
@@ -2079,7 +2119,8 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       Square.__super__.constructor.call(this, this.id, this.x, this.y, 0, 0, -1.57);
       this.destx = this.x;
       this.desty = this.y;
-      this.radius = this.size / 2;
+      this.radius = (this.size / 2) - 5;
+      this.invincibleTime = 1.0;
     }
 
     Square.prototype.clone = function() {
@@ -2090,11 +2131,13 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       sq.vy = this.vy;
       sq.destx = this.destx;
       sq.desty = this.desty;
+      sq.invincibleTime = this.invincibleTime;
       return sq;
     };
 
     Square.prototype.explode = function(state) {
       var explosion, id;
+      if (this.invincibleTime > 0) return;
       id = Math.floor(Math.random() * 1000000);
       explosion = new Explosion(id, this.x, this.y, 90);
       state.addObject(id, explosion);
@@ -2113,6 +2156,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       var dir, dist, to_move;
       dir = Point.subtract(this.destx, this.desty, this.x, this.y);
       dist = Point.getLength(dir.x, dir.y);
+      if (this.invincibleTime > 0) this.invincibleTime -= 0.7 * dt;
       to_move = Point.normalize(dir.x, dir.y, Math.sqrt(dist) * dt * 5000);
       if (dist < 0.5) {
         to_move = {
@@ -2129,6 +2173,9 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
     };
 
     Square.prototype.draw = function(context, options) {
+      if (this.invincibleTime > 0 && (Math.floor(this.invincibleTime * 15) % 2 === 1)) {
+        return;
+      }
       context.save();
       if ((options != null) && options.dim) context.globalAlpha = 0.5;
       context.translate(this.x, this.y);
