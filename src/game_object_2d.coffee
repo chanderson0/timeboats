@@ -29,6 +29,9 @@ exports.GameObject2D = class GameObject2D extends GameObject
     newPos = Point.add(@x, @y, @vx * dt, @vy * dt)
     @setPos newPos.x, newPos.y
 
+  containsPoint: (x, y) ->
+    Point.getDistance(x, y, @x, @y) < @radius
+
   collide: (state) ->
     @vx = 0
     @vy = 0
