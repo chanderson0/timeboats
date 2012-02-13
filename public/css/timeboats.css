@@ -1,31 +1,233 @@
-#game {
+html, body {
+  background: url('../img/sand.png') top left repeat;
+  text-align: center;
+  font-family: Verdana, sans-serif;
+}
+
+#container {
+  width: 1024px;
+  margin: 20px auto;
+  text-align: left;
+}
+
+#left {
   float: left;
   width: 720px;
-  margin: 20px;
+  height: 597px;
+  position: relative;
 }
 
-#playbutton {
-  width: 50px;
+#menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 720px;
+  height: 560px;
+  /*background: rgba(150, 150, 150, 0.2);*/
+  z-index: 1001;
+  text-align: center;
+  display: none;
 }
 
-#timeslider {
-  width: 500px;
-  float: right;
+#canvases {
+  background: #2b3c4c;
+  height: 560px;
 }
 
-#players {
+#menu .logo {
+  position: absolute;
+  top: 80px;
+  left: 6px;
+}
+
+#menu #loading {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(100,100,100,0.5);
+  display: none;
+  z-index: 100000;
+  text-align: center;
+  display: none;
+  vertical-align: middle; 
+}
+
+#loading img {
+  margin: 0 auto;
+}
+
+#menu #buttons {
+  position: absolute;
+  top: 260px;
+  left: 0;
+  width: 100%;
+}
+
+#menu button {
+  display: block;
+  width: 150px;
+  height: 50px;
+  margin: 20px auto;
+  border-style: none;
+  color: #fff;
+  background-color: #c0262f;
+  box-shadow: 3px 3px 3px #111;
+  border-radius: 3px; 
+  font-size: 20px;
+}
+
+#menu button:hover {
+  cursor: pointer;
+  background-color: #c84444;
+}
+
+#menu button:active {
+  cursor: pointer;
+  background-color: #7e2f2f;
+}
+
+#menu #load {
+  position: absolute;
+  top: 260px;
+  left: 0;
+  width: 100%;
+  display: none;
+}
+
+#menu #load #games {
+  margin: 0 auto;
+  width: 300px;
+  height: 200px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+#games .game {
+  display: block;
+  width: 270px;
+  margin: 10px auto;
+  border-radius: 5px;
+  background: #333;
+  color: #fff;
+  box-shadow: 3px 3px 3px #111;
+  height: 30px;
+  line-height: 30px;
+  font-family: Verdana, sans-serif;
+}
+
+#games .game:hover {
+  cursor: pointer;
+  background: #555;
+}
+
+#load button.back {
+  height: 30px !important;
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+}
+
+#game-canvas {
+  z-index: 1;
+}
+
+#menu-canvas {
+  z-index: 1000;
+}
+
+#controls { 
+  position: absolute;
+  top: 567px;
+  height: 30px;
+  line-height: 30px;
+  vertical-align: middle;
+  display: none;
+}
+
+#left #playbutton {
+  font-size:20px;
   float: left;
-  width: 200px;
-  margin: 20px 10px;
+  color:#FFFFFF;
+  width:100px;
+  height:30px;
+  background-color:#2b3c4c;
+  border-style:none;
+  cursor: pointer;
+}
+
+#left #playbutton:hover {
+  background-color: #777;
+}
+
+#left #playbutton:disabled {
+  background-color: #777;
+  color: #666;
+  cursor: default;
+}
+
+#left #timeslider {
+  -webkit-appearance: none;  
+  width: 613px;  
+  height: 30px;
+  margin: 0;
+  margin-left: 7px;
+  float: left;
+  /*-webkit-border-radius: 5px;  
+  border-radius: 5px;  */
+  background: #2b3c4c;  
+  cursor: pointer;
+}  
+
+#left #timeslider:disabled { 
+  cursor: none;
+}  
+
+#left #timeslider::-webkit-slider-thumb {  
+  -webkit-appearance: none;  
+  width: 15px;  
+  height: 30px;   
+  background: #fff;
+}  
+
+#right {
+  float: left;
+  width: 295px;
+  height: 597px;
+  position: relative;
+  margin-left: 9px;
+  font-family: Verdana, sans-serif;
+}
+
+#right .nav {
+  margin: 10px 0; 
+  background: #666666;
+  color: #fff;
+}
+
+#right :first-child {
+  margin: 0;
+}
+
+
+#right .nav .title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  padding: 7px 5px;
+  display: block;
 }
 
 #player_tiles .player {
-  height: 40px;
-  width: 100%;
-  margin: 3px;
-  background: #eee;
+  height: 20px;
+  width: 285px;
   padding: 5px;
-  line-height: 40px;
+  background: #999999;
+  line-height: 20px;
   vertical-align: center;
 }
 
@@ -34,23 +236,24 @@
 }
 
 .player_name {
+  color: #333333;
   font-weight: bold;
-}
-
-.player_score {
-  float: right;
 }
 
 #turn_tiles .turn {
   cursor: pointer;
   height: 20px;
-  width: 100%;
-  margin: 3px;
-  background: #eee;
+  width: 285px;
+  background: #999999;
   padding: 5px;
   line-height: 20px;
-  font-size: 70%;
+  font-size: 12px;
+  color: #333333;
   vertical-align: center;
+}
+
+#turn_tiles .turn .player_name {
+  font-weight: bold;
 }
 
 #turn_tiles .turn:hover {
@@ -63,4 +266,88 @@
 
 .turn_time {
   font-style: italic;
+}
+
+
+
+
+
+#circular3dG{
+  position:relative;
+  margin: 200px auto;
+  width:64px;
+  height:64px;
+}
+
+.circular3dG{
+  position:absolute;
+  background-color:#ffffff;
+  width:18px;
+  height:18px;
+  -webkit-border-radius:19px;
+  -moz-border-radius:19px;
+  -webkit-animation-name:bounce_circular3dG;
+  -webkit-animation-duration:1.03s;
+  -webkit-animation-iteration-count:infinite;
+  -webkit-animation-direction:linear;
+}
+
+#circular3d_1G{
+  left:26px;
+  top:4px;
+  -webkit-transform:scale(.3);
+}
+
+#circular3d_2G{
+  left:39px;
+  top:15px;
+  -webkit-transform:scale(.3);
+  -webkit-animation-delay:0.13s;
+}
+
+#circular3d_3G{
+  left:47px;
+  top:29px;
+  -webkit-transform:scale(.3);
+  -webkit-animation-delay:0.26s;
+}
+
+#circular3d_4G{
+  left:44px;
+  top:43px;
+  -webkit-transform:scale(.3);
+  -webkit-animation-delay:0.39s;
+}
+
+#circular3d_5G{
+  left:27px;
+  top:47px;
+  -webkit-transform:scale(.3);
+  -webkit-animation-delay:0.52s;
+}
+
+#circular3d_6G{
+  left:5px;
+  top:31px;
+  -webkit-transform:scale(.3);
+  -webkit-animation-delay:0.65s;
+}
+
+#circular3d_7G{
+  left:0px;
+  top:9px;
+  -webkit-transform:scale(.3);
+  -webkit-animation-delay:0.78s;
+}
+
+#circular3d_8G{
+  left:11px;
+  top:0px;
+  -webkit-transform:scale(.3);
+  -webkit-animation-delay:0.91s;
+}
+
+@-webkit-keyframes bounce_circular3dG{
+  0%{-webkit-transform:scale(1)}
+  100%{-webkit-transform:scale(.3)}
 }

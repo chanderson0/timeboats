@@ -42,19 +42,16 @@ exports.State = class State extends Serializable
 
     true
 
+  drawRegions: (context) ->
+    # Draw dirty region
+    for id, object of @objects
+      region = object.redrawRegion()
+      Map.getInstance().drawRegion context, region: region
+
   draw: (context, options) =>
     if @full_redraw
       #@full_redraw = false
       Map.getInstance().draw context, full_redraw: true
-    else
-      # Draw dirty region
-      for id, object of @objects
-        region = 
-          x: object.x - object.radius * 2
-          y: object.y - object.radius * 2
-          width: object.radius * 4
-          height: object.radius * 4
-        Map.getInstance().drawRegion context, region: region
 
     for id, object of @objects
       object.draw context, dim: options.active != id

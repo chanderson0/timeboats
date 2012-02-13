@@ -12,6 +12,7 @@ exports.Timeboats = class Timeboats
     @renderstep = 1 / 60
 
     @gamestate = "init"
+    @placeholder = null
 
     @frame_history = []
     @command_history = []
@@ -37,7 +38,7 @@ exports.Timeboats = class Timeboats
 
     @frame_history.push initialState
 
-    @full_redraw = false
+    @full_redraw = true
     if @document?
       @m_canvas = @document.createElement 'canvas'
       @m_canvas.width = @width
@@ -47,6 +48,10 @@ exports.Timeboats = class Timeboats
       @m_canvas = null
 
     AssetLoader.getInstance().load()
+
+    gamePlayer = @game.currentPlayer()
+    startDock = Map.getInstance().docks[gamePlayer.id]
+    startDock.active = true
 
     @game.render()
 
@@ -67,6 +72,8 @@ exports.Timeboats = class Timeboats
     console.log oldState, '->', newState
 
     if (oldState == "init" || oldState == "ready") and newState == "recording"
+      @placeholder = null
+
       gamePlayer = @game.currentPlayer()
       startDock = Map.getInstance().docks[gamePlayer.id]
       player = new Square(@game.next_turn_id, startDock.x, startDock.y, 32, gamePlayer.color)
@@ -74,12 +81,15 @@ exports.Timeboats = class Timeboats
       @addCommand @command_history, command
       @addCommand @active_commands, command
 
+      startDock.active = false
+
       @gamestate = "recording"
 
       $("#playbutton").html "Stop"
       $("#playbutton").prop "disabled", true
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", true
+      $("#timeslider").prop "disabled", true
     else if (oldState == "init" || oldState == "paused") and newState == "rerecording"
       @gamestate = "rerecording"
 
@@ -89,6 +99,7 @@ exports.Timeboats = class Timeboats
       $("#playbutton").prop "disabled", true
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", true
+      $("#timeslider").prop "disabled", false
     else if oldState == "rerecording" and newState == "paused"
       @gamestate = "paused"
 
@@ -100,10 +111,15 @@ exports.Timeboats = class Timeboats
         $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", false
+      $("#timeslider").prop "disabled", false
     else if oldState == "recording" and newState == "paused"
       @game.recordTurn @active_commands
       @active_commands = []
       @game.nextTurn()
+
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      startDock.active = true
 
       @setFrameNum(0)
       @full_redraw = true
@@ -120,6 +136,7 @@ exports.Timeboats = class Timeboats
         $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", false
+      $("#timeslider").prop "disabled", false
     else if oldState == "paused" and newState == "playing"
       @gamestate = "playing"
 
@@ -127,14 +144,14 @@ exports.Timeboats = class Timeboats
       $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", true
+      $("#timeslider").prop "disabled", true
     else if oldState == "paused" and newState == "ready"
       @setFrameNum(0)
 
       if not @game.isLatestTurn()
         @game.setTurn @game.latestTurnNumber()
         @command_history = @game.computeCommands()
-
-        @frame_history = [@frame_history[@frame_num]]
+        @frame_history = [@frame_history[0]]
 
       @gamestate = "ready"
 
@@ -142,12 +159,14 @@ exports.Timeboats = class Timeboats
       $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", true
+      $("#timeslider").prop "disabled", true
     else if (oldState == "playing" || oldState == "ready") and newState == "paused"
       @gamestate = "paused"
 
       $("#playbutton").html "Play"
       $("#addbutton").html "Ready Next"
       $("#addbutton").prop "disabled", false
+      $("#timeslider").prop "disabled", false
     else
       console.log "couldn't switch state"
 
@@ -238,18 +257,21 @@ exports.Timeboats = class Timeboats
       Map.getInstance().draw @context
       @frame_history[@frame_num].draw @context, active: @game.next_turn_id
     else
+      @frame_history[@frame_num].drawRegions @m_context
       Map.getInstance().draw @m_context, full_redraw: @full_redraw
       @full_redraw = false
-
       @frame_history[@frame_num].draw @m_context, active: @game.next_turn_id
       @context.drawImage @m_canvas, 0, 0
-    Map.getInstance().drawNonTerrain(@context)
 
   onMouseDown: (e) =>
     if @gamestate == "recording"
       command = new Command.ExplodeCommand @game.next_turn_id
       @addCommand @command_history, command
       @addCommand @active_commands, command
+    else if @gamestate == "ready" 
+      console.log Point.getDistance(e.offsetX, e.offsetY, @placeholder.x, @placeholder.y)
+      if @placeholder.containsPoint e.offsetX, e.offsetY
+        @updateState "init", "recording"
 
   onMouseMove: (e) =>
     if @gamestate == "recording"

@@ -92,11 +92,15 @@ exports.Map = class Map extends GameObject
             context.fillRect cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
 
       context.restore()
+      @drawNonTerrain context
 
   drawNonTerrain: (context) ->
     if @isInitialized
       for playerId, dock of @docks
-        dock.draw(context)
+        region = dock.redrawRegion()
+        @drawRegion context, region: region
+        dock.draw context
+
 
   drawRegion: (context, options = {}) ->
     if @isInitialized
@@ -112,7 +116,11 @@ exports.Map = class Map extends GameObject
           cellX = x * Map.CELL_SIZE_PX
           cellY = y * Map.CELL_SIZE_PX
 
-          [r, g, b] = @cells[x][y].getColor()
+          try
+            [r, g, b] = @cells[x][y].getColor()
+          catch error
+            console.log x, y, 'out of bounds', options, @width, @height
+            return
 
           context.fillStyle = "rgba(#{r}, #{g}, #{b}, 1)"
           context.fillRect cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX

@@ -127,6 +127,7 @@ app = express.createServer(
 
 app.configure ->
   app.set 'view engine', 'ejs'
+  app.use express.gzip()
 
 app.get '/', (req, res) ->
   res.render 'home',

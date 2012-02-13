@@ -8,7 +8,7 @@ exports.Square = class Square extends GameObject2D
   __type: 'Square'
 
   constructor: (@id, @x, @y, @size, @fill = "white") ->
-    super @id, @x, @y
+    super @id, @x, @y, 0, 0, -1.57
 
     @destx = @x
     @desty = @y
@@ -44,8 +44,8 @@ exports.Square = class Square extends GameObject2D
       @setPos @destx, @desty
 
     @setAcc to_move.x, to_move.y
-    @vx *= 0.98
-    @vy *= 0.98
+    @vx *= (0.98 * 60) * dt
+    @vy *= (0.98 * 60) * dt
 
     Map.getInstance().collideWith(@, state, true)
 
