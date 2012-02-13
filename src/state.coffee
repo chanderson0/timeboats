@@ -4,14 +4,19 @@ Map = require('./map.coffee').Map
 exports.State = class State extends Serializable
   __type: 'State'
 
-  constructor: ->
+  constructor: (@time = null) ->
     @objects = {}
     @commands = []
+    @scores = {}
     @full_redraw = false
 
-  clone: ->
-    st = new State()
-    #st.full_redraw = @full_redraw
+  clone: (time = null) ->
+    st = new State time
+
+    for id, scores of @scores
+      st.scores[id] = {}
+      for scoretype, value of scores
+        st.scores[id][scoretype] = value
 
     for id, object of @objects
       st.objects[id] = object.clone()
@@ -31,6 +36,35 @@ exports.State = class State extends Serializable
     @objects[id].leave =>
       delete @objects[id]
     @full_redraw = true
+
+  addScore: (id, score, scoretype) ->
+    console.log id, score, scoretype
+    if not @scores[id]?
+      @scores[id] = {}
+    if not @scores[id][scoretype]?
+      @scores[id][scoretype] = 0
+
+    @scores[id][scoretype] += score
+
+  # need mapping turn -> player_id
+  # returns player_id -> scoretype -> value
+  playerScores: (mapping) ->
+    ret = {}
+    # console.log 'scores', @scores
+    for id, scores of @scores
+      player_id = mapping[id]
+
+      # console.log id, player_id, scores
+
+      for scoretype, value of scores
+        if not ret[player_id]?
+          ret[player_id] = {}
+        if not ret[player_id][scoretype]?
+          ret[player_id][scoretype] = 0
+
+        ret[player_id][scoretype] += value
+    
+    ret
 
   update: (dt) ->
     for command in @commands

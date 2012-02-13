@@ -5,9 +5,12 @@ Map = require('./map.coffee').Map
 exports.Player = class Player extends Serializable
   __type: 'Player'
 
-  constructor: (@id = null, @color = 0) ->
+  constructor: (@id = null, @color = 0, @nickname = null) ->
     if not @id?
       @id = UUID.generate()
+    if not @nickname?
+      @nickname = ("" + @id).substring(0, 10)
+    @score = 0
 
     super
 
@@ -54,7 +57,7 @@ class GameRenderer
       active: if active then 'active' else ''
       id: player.id
       name: player.color
-      score: 0
+      score: player.score
     if update
       $('#'+player.id).replaceWith html
     else
@@ -98,11 +101,28 @@ exports.Game = class Game extends Serializable
   currentPlayer: ->
     @getPlayerByIndex @current_player_id
 
+  turnsToPlayers: ->
+    ret = {}
+    for turn in @turns
+      ret[turn.id] = turn.player_id
+    ret
+
+  setScores: (scoremap, time) ->
+    for player_id, scores of scoremap
+      boats = scores['boat'] || 0
+      checkpoints = scores['checkpoint'] || 0
+      gold = scores['gold'] || 0
+      score = @computeScore(time, checkpoints, boats, gold)
+
+      @players[player_id].score = score
+
+  computeScore: (time, checkpoints, boats, gold) ->
+    gold + checkpoints + boats # + time
+
   recordTurn: (commands) ->
-    turn = new Turn @turn_id, @currentPlayer().id, commands
+    turn = new Turn @next_turn_id, @currentPlayer().id, commands
     @turns.push turn
     @turn_idx = @latestTurnNumber()
-    console.log 'recordTurn'
     @render()
     return turn
 

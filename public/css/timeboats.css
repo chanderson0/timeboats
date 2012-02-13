@@ -240,6 +240,13 @@ canvas {
   font-weight: bold;
 }
 
+.player_score {
+  color: #000;
+  float: right;
+  font-weight: bold;
+  text-align: right;
+}
+
 #turn_tiles .turn {
   cursor: pointer;
   height: 20px;

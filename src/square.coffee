@@ -28,6 +28,7 @@ exports.Square = class Square extends GameObject2D
     explosion = new Explosion id, @x, @y, 90
     state.addObject id, explosion
     state.removeObject @id
+    state.addScore @id, 1, 'boat'
 
   setVel: (vx, vy) ->
     super vx, vy

@@ -52,6 +52,7 @@ exports.Timeboats = class Timeboats
     gamePlayer = @game.currentPlayer()
     startDock = Map.getInstance().docks[gamePlayer.id]
     startDock.active = 'ready'
+    @time = 0
 
     @game.render()
 
@@ -87,8 +88,6 @@ exports.Timeboats = class Timeboats
 
       $("#playbutton").html "Stop"
       $("#playbutton").prop "disabled", true
-      $("#addbutton").html "Ready Next"
-      $("#addbutton").prop "disabled", true
       $("#timeslider").prop "disabled", true
     else if (oldState == "init" || oldState == "paused") and newState == "rerecording"
       @gamestate = "rerecording"
@@ -101,8 +100,6 @@ exports.Timeboats = class Timeboats
 
       $("#playbutton").html "Stop"
       $("#playbutton").prop "disabled", true
-      $("#addbutton").html "Ready Next"
-      $("#addbutton").prop "disabled", true
       $("#timeslider").prop "disabled", false
     else if oldState == "rerecording" and newState == "paused"
       @gamestate = "paused"
@@ -117,8 +114,6 @@ exports.Timeboats = class Timeboats
       if @game.turns.length > 0
         $("#playbutton").html "Play"
         $("#playbutton").prop "disabled", false
-      $("#addbutton").html "Ready Next"
-      $("#addbutton").prop "disabled", false
       $("#timeslider").prop "disabled", false
     else if oldState == "recording" and newState == "paused"
       @game.recordTurn @active_commands
@@ -128,6 +123,15 @@ exports.Timeboats = class Timeboats
       gamePlayer = @game.currentPlayer()
       startDock = Map.getInstance().docks[gamePlayer.id]
       startDock.active = 'ready'
+
+      # This should probably be somewhere else
+      state = @frame_history[@frame_num]
+      map = @game.turnsToPlayers()
+      scores = state.playerScores map
+      @game.setScores scores, state.time
+      @game.render()
+
+      console.log state, map, scores, @game
 
       @setFrameNum(0)
       @full_redraw = true
@@ -142,8 +146,6 @@ exports.Timeboats = class Timeboats
       if @game.turns.length > 0
         $("#playbutton").html "Play"
         $("#playbutton").prop "disabled", false
-      $("#addbutton").html "Ready Next"
-      $("#addbutton").prop "disabled", false
       $("#timeslider").prop "disabled", false
     else if oldState == "paused" and newState == "playing"
       @gamestate = "playing"
@@ -154,11 +156,10 @@ exports.Timeboats = class Timeboats
 
       $("#playbutton").html "Pause"
       $("#playbutton").prop "disabled", false
-      $("#addbutton").html "Ready Next"
-      $("#addbutton").prop "disabled", true
       $("#timeslider").prop "disabled", true
     else if oldState == "paused" and newState == "ready"
       @setFrameNum(0)
+      @time = 0
 
       if not @game.isLatestTurn()
         @game.setTurn @game.latestTurnNumber()
@@ -173,8 +174,6 @@ exports.Timeboats = class Timeboats
 
       $("#playbutton").html "Start"
       $("#playbutton").prop "disabled", false
-      $("#addbutton").html "Ready Next"
-      $("#addbutton").prop "disabled", true
       $("#timeslider").prop "disabled", true
     else if (oldState == "playing" || oldState == "ready") and newState == "paused"
       @gamestate = "paused"
@@ -184,8 +183,6 @@ exports.Timeboats = class Timeboats
       startDock.active = 'ready'
 
       $("#playbutton").html "Play"
-      $("#addbutton").html "Ready Next"
-      $("#addbutton").prop "disabled", false
       $("#timeslider").prop "disabled", false
     else
       console.log "couldn't switch state"
@@ -233,10 +230,10 @@ exports.Timeboats = class Timeboats
     Map.getInstance().update dt
 
     if @gamestate == "recording" || @gamestate == "rerecording"
-      # console.log "recording", @frame_num
+      @time += dt
       Map.getInstance().setFrame(@frame_num + 1, true)
 
-      next_state = @frame_history[@frame_num].clone()
+      next_state = @frame_history[@frame_num].clone @time
       next_state.setCommands (@command_history[@frame_num] || [])
       next_state.update dt
 
