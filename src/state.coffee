@@ -83,9 +83,9 @@ exports.State = class State extends Serializable
       Map.getInstance().drawRegion context, region: region
 
   draw: (context, options) =>
-    if @full_redraw
+    #if @full_redraw
       #@full_redraw = false
-      Map.getInstance().draw context, full_redraw: true
+      #Map.getInstance().draw context, full_redraw: true
 
     for id, object of @objects
       object.draw context, dim: options.active != id

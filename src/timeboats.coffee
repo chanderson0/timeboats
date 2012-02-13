@@ -40,10 +40,15 @@ exports.Timeboats = class Timeboats
 
     @full_redraw = true
     if @document?
-      @m_canvas = @document.createElement 'canvas'
-      @m_canvas.width = @width
-      @m_canvas.height = @height
-      @m_context = @m_canvas.getContext '2d'
+      @game_canvas = @document.createElement 'canvas'
+      @game_canvas.width = @width
+      @game_canvas.height = @height
+      @game_context = @game_canvas.getContext '2d'
+
+      @map_canvas = @document.createElement 'canvas'
+      @map_canvas.width = @width
+      @map_canvas.height = @height
+      @map_context = @map_canvas.getContext '2d'
     else
       @m_canvas = null
 
@@ -248,15 +253,24 @@ exports.Timeboats = class Timeboats
       # Check there are still players
       if @frame_num > 0
         player_count = 0
+        command_count = next_state.commands.length
+        
+        if command_count > 0
+          @frames_no_commands = 0
+        else
+          @frames_no_commands++
+
         for id, object of next_state.objects
           if object.__type == 'Square' || object.__type == 'Explosion'
             player_count++
 
-        if player_count == 0
+        if player_count == 0 or @frames_no_commands > 300
           @frame_history.splice @frame_num + 1,
             @frame_history.length - @frame_num
           @updateSlider(@frame_num, @frame_num)
           @updateState @gamestate, "paused"
+      else
+        @frames_no_commands = 0
 
     else if @gamestate == "playing"
       @setFrameNum(@frame_num + 1)
@@ -268,17 +282,30 @@ exports.Timeboats = class Timeboats
     else if @gamestate == "paused"
       @state = @frame_history[@frame_num]
 
+  drawHUD: (context) ->
+    if @gamestate == 'recording' and @frames_no_commands > 200
+      context.save()
+      context.fillStyle = '#c0262f'
+      context.font = 'bold 20px Verdana'
+      context.textAlign = 'center'
+      context.fillText 'No movement warning!', @width / 2, 30
+      context.restore()
+    
+    time = @frame_history[@frame_num].time
+    time = 0 if not time?
+    $('#time').html time.toFixed 2
+
   draw: ->
-    if not @m_canvas?
-      @context.clearRect 0, 0, @width + 1, @height + 1
-      Map.getInstance().draw @context
-      @frame_history[@frame_num].draw @context, active: @game.next_turn_id
-    else
-      @frame_history[@frame_num].drawRegions @m_context
-      Map.getInstance().draw @m_context, full_redraw: @full_redraw
-      @full_redraw = false
-      @frame_history[@frame_num].draw @m_context, active: @game.next_turn_id
-      @context.drawImage @m_canvas, 0, 0
+    Map.getInstance().draw @map_context
+
+    @game_context.clearRect 0, 0, @width, @height
+    Map.getInstance().drawNonTerrain @game_context
+    @frame_history[@frame_num].draw @game_context, active: @game.next_turn_id
+    
+    @drawHUD @game_context
+
+    @context.drawImage @map_canvas, 0, 0
+    @context.drawImage @game_canvas, 0, 0
 
   onMouseDown: (e) =>
     if @gamestate == "recording"

@@ -204,6 +204,19 @@ canvas {
   font-family: Verdana, sans-serif;
 }
 
+#time {
+  background: #2b3c4c;
+  /*background: -webkit-linear-gradient(top, #666666 0%,#666666 57%,#474747 100%);
+  background: linear-gradient(top, #666666 0%,#666666 57%,#474747 100%);*/
+  color: #c0262f;
+  font-family: Verdana, sans-serif;
+  font-size: 40px;
+  font-weight: bold;
+  padding: 10px;
+  text-shadow: 1px 1px 1px #1D2833;
+  text-align: center;
+}
+
 #right .nav {
   margin: 10px 0; 
   background: #666666;
