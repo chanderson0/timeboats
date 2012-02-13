@@ -400,7 +400,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       AssetLoader.getInstance().load();
       gamePlayer = this.game.currentPlayer();
       startDock = Map.getInstance().docks[gamePlayer.id];
-      startDock.active = true;
+      startDock.active = 'ready';
       this.game.render();
     }
 
@@ -431,7 +431,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         command = new Command.JoinCommand(player.id, player);
         this.addCommand(this.command_history, command);
         this.addCommand(this.active_commands, command);
-        startDock.active = false;
+        startDock.active = null;
         this.gamestate = "recording";
         $("#playbutton").html("Stop");
         $("#playbutton").prop("disabled", true);
@@ -440,6 +440,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         return $("#timeslider").prop("disabled", true);
       } else if ((oldState === "init" || oldState === "paused") && newState === "rerecording") {
         this.gamestate = "rerecording";
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        startDock.active = 'ready';
         $("#playbutton").html("Stop");
         $("#playbutton").prop("disabled", true);
         $("#addbutton").html("Ready Next");
@@ -449,6 +452,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.gamestate = "paused";
         this.setFrameNum(0);
         this.full_redraw = true;
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        startDock.active = 'ready';
         if (this.game.turns.length > 0) {
           $("#playbutton").html("Play");
           $("#playbutton").prop("disabled", false);
@@ -462,7 +468,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.game.nextTurn();
         gamePlayer = this.game.currentPlayer();
         startDock = Map.getInstance().docks[gamePlayer.id];
-        startDock.active = true;
+        startDock.active = 'ready';
         this.setFrameNum(0);
         this.full_redraw = true;
         if (this.api != null) {
@@ -480,6 +486,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         return $("#timeslider").prop("disabled", false);
       } else if (oldState === "paused" && newState === "playing") {
         this.gamestate = "playing";
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        startDock.active = 'ready';
         $("#playbutton").html("Pause");
         $("#playbutton").prop("disabled", false);
         $("#addbutton").html("Ready Next");
@@ -492,6 +501,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
           this.command_history = this.game.computeCommands();
           this.frame_history = [this.frame_history[0]];
         }
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        startDock.active = 'go';
         this.gamestate = "ready";
         $("#playbutton").html("Start");
         $("#playbutton").prop("disabled", false);
@@ -500,6 +512,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         return $("#timeslider").prop("disabled", true);
       } else if ((oldState === "playing" || oldState === "ready") && newState === "paused") {
         this.gamestate = "paused";
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        startDock.active = 'ready';
         $("#playbutton").html("Play");
         $("#addbutton").html("Ready Next");
         $("#addbutton").prop("disabled", false);
@@ -613,25 +628,41 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.onMouseDown = function(e) {
-      var command;
+      var command, gamePlayer, startDock;
       if (this.gamestate === "recording") {
         command = new Command.ExplodeCommand(this.game.next_turn_id);
         this.addCommand(this.command_history, command);
         return this.addCommand(this.active_commands, command);
       } else if (this.gamestate === "ready") {
-        console.log(Point.getDistance(e.offsetX, e.offsetY, this.placeholder.x, this.placeholder.y));
-        if (this.placeholder.containsPoint(e.offsetX, e.offsetY)) {
-          return this.updateState("init", "recording");
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        if (startDock.containsPoint(e.offsetX, e.offsetY)) {
+          return this.updateState(this.gamestate, "recording");
+        }
+      } else if (this.gamestate === "paused") {
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        if (startDock.containsPoint(e.offsetX, e.offsetY)) {
+          return this.updateState(this.gamestate, "ready");
         }
       }
     };
 
     Timeboats.prototype.onMouseMove = function(e) {
-      var command;
+      var command, gamePlayer, startDock;
+      $('#game-canvas')[0].style.cursor = 'default';
       if (this.gamestate === "recording") {
         command = new Command.MouseCommand(this.game.next_turn_id, e[0], e[1]);
         this.addCommand(this.command_history, command);
         return this.addCommand(this.active_commands, command);
+      } else if ((this.document != null) && (this.gamestate === "init" || this.gamestate === "ready" || this.gamestate === "paused")) {
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        if (startDock.containsPoint(e[0], e[1])) {
+          return $('#game-canvas')[0].style.cursor = 'pointer';
+        } else {
+          return $('#game-canvas')[0].style.cursor = 'default';
+        }
       }
     };
 
@@ -1715,7 +1746,11 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
         marker1: "marker1.png",
         smoke0: "smoke1.png",
         smoke1: "smoke2.png",
-        smoke2: "circle4.png"
+        smoke2: "circle4.png",
+        go0: "go0.png",
+        go1: "go1.png",
+        getready0: "getready0.png",
+        getready1: "getready1.png"
       };
       this.numAssets = this.urls.length;
       this.numLoaded = 0;
@@ -1776,7 +1811,7 @@ require.define("/dock.coffee", function (require, module, exports, __dirname, __
       this.dt = 0;
       this.alpha = 1;
       this.radius = 48;
-      this.active = false;
+      this.active = null;
     }
 
     Dock.prototype.clone = function() {
@@ -1792,7 +1827,7 @@ require.define("/dock.coffee", function (require, module, exports, __dirname, __
       this.dt += dt;
       if (this.dt >= 0.4) {
         this.dt = 0;
-        if (this.active) {
+        if (this.active != null) {
           this.frame++;
           this.frame %= 2;
         }
@@ -1805,6 +1840,11 @@ require.define("/dock.coffee", function (require, module, exports, __dirname, __
       context.save();
       context.drawImage(AssetLoader.getInstance().getAsset("dock"), this.x - 38, this.y - 23, 76, 46);
       context.drawImage(AssetLoader.getInstance().getAsset("marker" + this.frame), this.x - 30, this.y - 32, 44, 43);
+      if (this.active === 'ready') {
+        context.drawImage(AssetLoader.getInstance().getAsset("getready" + this.frame), this.x - 15, this.y + 28, 30, 24);
+      } else if (this.active === 'go') {
+        context.drawImage(AssetLoader.getInstance().getAsset("go" + this.frame), this.x - 15, this.y + 23, 30, 24);
+      }
       return context.restore();
     };
 

@@ -10,7 +10,7 @@ exports.Dock = class Dock extends GameObject2D
     @dt = 0
     @alpha = 1
     @radius = 48
-    @active = false
+    @active = null
 
   clone: ->
     c = new Dock(@id, @x, @y)
@@ -23,7 +23,7 @@ exports.Dock = class Dock extends GameObject2D
     @dt += dt
     if @dt >= 0.4
       @dt = 0
-      if @active
+      if @active?
         @frame++
         @frame %= 2
     if @alpha > 0.5
@@ -34,6 +34,13 @@ exports.Dock = class Dock extends GameObject2D
   draw: (context) ->
     context.save()
     #context.globalAlpha = @alpha
+
     context.drawImage(AssetLoader.getInstance().getAsset("dock"), @x - 38, @y - 23, 76, 46)
     context.drawImage(AssetLoader.getInstance().getAsset("marker" + @frame), @x - 30, @y - 32, 44, 43)
+    
+    if @active == 'ready'
+      context.drawImage(AssetLoader.getInstance().getAsset("getready" + @frame), @x - 15, @y + 28, 30, 24)  
+    else if @active == 'go'
+      context.drawImage(AssetLoader.getInstance().getAsset("go" + @frame), @x - 15, @y + 23, 30, 24)  
+
     context.restore()

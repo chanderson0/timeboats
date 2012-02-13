@@ -47,7 +47,7 @@ exports.Timeboats = class Timeboats
 
     gamePlayer = @game.currentPlayer()
     startDock = Map.getInstance().docks[gamePlayer.id]
-    startDock.active = true
+    startDock.active = 'ready'
 
     @game.render()
 
@@ -77,7 +77,7 @@ exports.Timeboats = class Timeboats
       @addCommand @command_history, command
       @addCommand @active_commands, command
 
-      startDock.active = false
+      startDock.active = null
 
       @gamestate = "recording"
 
@@ -91,6 +91,10 @@ exports.Timeboats = class Timeboats
 
       # TODO: enforce no stopping
 
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      startDock.active = 'ready'
+
       $("#playbutton").html "Stop"
       $("#playbutton").prop "disabled", true
       $("#addbutton").html "Ready Next"
@@ -101,6 +105,10 @@ exports.Timeboats = class Timeboats
 
       @setFrameNum(0)
       @full_redraw = true
+
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      startDock.active = 'ready'
 
       if @game.turns.length > 0
         $("#playbutton").html "Play"
@@ -115,7 +123,7 @@ exports.Timeboats = class Timeboats
 
       gamePlayer = @game.currentPlayer()
       startDock = Map.getInstance().docks[gamePlayer.id]
-      startDock.active = true
+      startDock.active = 'ready'
 
       @setFrameNum(0)
       @full_redraw = true
@@ -136,6 +144,10 @@ exports.Timeboats = class Timeboats
     else if oldState == "paused" and newState == "playing"
       @gamestate = "playing"
 
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      startDock.active = 'ready'
+
       $("#playbutton").html "Pause"
       $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
@@ -149,6 +161,10 @@ exports.Timeboats = class Timeboats
         @command_history = @game.computeCommands()
         @frame_history = [@frame_history[0]]
 
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      startDock.active = 'go'
+
       @gamestate = "ready"
 
       $("#playbutton").html "Start"
@@ -158,6 +174,10 @@ exports.Timeboats = class Timeboats
       $("#timeslider").prop "disabled", true
     else if (oldState == "playing" || oldState == "ready") and newState == "paused"
       @gamestate = "paused"
+
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      startDock.active = 'ready'
 
       $("#playbutton").html "Play"
       $("#addbutton").html "Ready Next"
@@ -269,9 +289,24 @@ exports.Timeboats = class Timeboats
       startDock = Map.getInstance().docks[gamePlayer.id]
       if startDock.containsPoint e.offsetX, e.offsetY
         @updateState @gamestate, "recording"
+    else if @gamestate == "paused" 
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      if startDock.containsPoint e.offsetX, e.offsetY
+        @updateState @gamestate, "ready"
 
   onMouseMove: (e) =>
+    $('#game-canvas')[0].style.cursor = 'default'
     if @gamestate == "recording"
       command = new Command.MouseCommand @game.next_turn_id, e[0], e[1]
       @addCommand @command_history, command
       @addCommand @active_commands, command
+    else if @document? and (@gamestate == "init" or @gamestate == "ready" or @gamestate == "paused")
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      if startDock.containsPoint e[0], e[1]
+        $('#game-canvas')[0].style.cursor = 'pointer'
+      else
+        $('#game-canvas')[0].style.cursor = 'default'
+
+
