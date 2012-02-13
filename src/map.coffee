@@ -278,7 +278,7 @@ exports.Map = class Map extends GameObject
       @checkpoints.push ck
 
     # now add some mines.
-    numMines = 12
+    numMines = 1
     for i in [1..numMines]
       mPosition = @getRandomClearPosition()
       m = new Mine("mine" + i, mPosition.x * Map.CELL_SIZE_PX, mPosition.y * Map.CELL_SIZE_PX)

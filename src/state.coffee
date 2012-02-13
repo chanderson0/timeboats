@@ -8,10 +8,12 @@ exports.State = class State extends Serializable
     @objects = {}
     @commands = []
     @scores = {}
-    @full_redraw = false
+    @gameover = false
 
   clone: (time = null) ->
     st = new State time
+
+    st.gameover = @gameover
 
     for id, scores of @scores
       st.scores[id] = {}

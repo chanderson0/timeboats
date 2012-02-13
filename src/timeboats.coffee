@@ -125,10 +125,6 @@ exports.Timeboats = class Timeboats
       @active_commands = []
       @game.nextTurn()
 
-      gamePlayer = @game.currentPlayer()
-      startDock = Map.getInstance().docks[gamePlayer.id]
-      startDock.active = 'ready'
-
       # This should probably be somewhere else
       state = @frame_history[@frame_num]
       map = @game.turnsToPlayers()
@@ -136,17 +132,22 @@ exports.Timeboats = class Timeboats
       @game.setScores scores, state.time
       @game.render()
 
-      console.log state, map, scores, @game
-
-      @setFrameNum(0)
-      @full_redraw = true
-
       if @api?
         @api.saveGame @game, (err, worked) ->
           if err or not worked
             alert "Couldn't save game"
 
       @gamestate = "paused"
+
+      if @frame_history[@frame_history.length - 1].gameover
+        @updateState @gamestate, "gameover"
+        return
+
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      startDock.active = 'ready'
+
+      @setFrameNum(0)
 
       if @game.turns.length > 0
         $("#playbutton").html "Play"
@@ -188,7 +189,16 @@ exports.Timeboats = class Timeboats
       startDock.active = 'ready'
 
       $("#playbutton").html "Play"
+      $("#playbutton").prop "disabled", false
       $("#timeslider").prop "disabled", false
+    else if newState == "gameover"
+      @gamestate = "gameover"
+
+      $("#playbutton").html "Play"
+      $("#playbutton").prop "disabled", true
+      $("#timeslider").prop "disabled", true
+
+      window.gameOver @game      
     else
       console.log "couldn't switch state"
 

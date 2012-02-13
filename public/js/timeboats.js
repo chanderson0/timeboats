@@ -471,23 +471,25 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.game.recordTurn(this.active_commands);
         this.active_commands = [];
         this.game.nextTurn();
-        gamePlayer = this.game.currentPlayer();
-        startDock = Map.getInstance().docks[gamePlayer.id];
-        startDock.active = 'ready';
         state = this.frame_history[this.frame_num];
         map = this.game.turnsToPlayers();
         scores = state.playerScores(map);
         this.game.setScores(scores, state.time);
         this.game.render();
-        console.log(state, map, scores, this.game);
-        this.setFrameNum(0);
-        this.full_redraw = true;
         if (this.api != null) {
           this.api.saveGame(this.game, function(err, worked) {
             if (err || !worked) return alert("Couldn't save game");
           });
         }
         this.gamestate = "paused";
+        if (this.frame_history[this.frame_history.length - 1].gameover) {
+          this.updateState(this.gamestate, "gameover");
+          return;
+        }
+        gamePlayer = this.game.currentPlayer();
+        startDock = Map.getInstance().docks[gamePlayer.id];
+        startDock.active = 'ready';
+        this.setFrameNum(0);
         if (this.game.turns.length > 0) {
           $("#playbutton").html("Play");
           $("#playbutton").prop("disabled", false);
@@ -522,7 +524,14 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         startDock = Map.getInstance().docks[gamePlayer.id];
         startDock.active = 'ready';
         $("#playbutton").html("Play");
+        $("#playbutton").prop("disabled", false);
         return $("#timeslider").prop("disabled", false);
+      } else if (newState === "gameover") {
+        this.gamestate = "gameover";
+        $("#playbutton").html("Play");
+        $("#playbutton").prop("disabled", true);
+        $("#timeslider").prop("disabled", true);
+        return window.gameOver(this.game);
       } else {
         return console.log("couldn't switch state");
       }
@@ -716,13 +725,14 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
       this.objects = {};
       this.commands = [];
       this.scores = {};
-      this.full_redraw = false;
+      this.gameover = false;
     }
 
     State.prototype.clone = function(time) {
       var id, object, scores, scoretype, st, value, _ref, _ref2;
       if (time == null) time = null;
       st = new State(time);
+      st.gameover = this.gameover;
       _ref = this.scores;
       for (id in _ref) {
         scores = _ref[id];
@@ -1283,7 +1293,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
         ck.y += 5;
         this.checkpoints.push(ck);
       }
-      numMines = 12;
+      numMines = 1;
       for (i = 1; 1 <= numMines ? i <= numMines : i >= numMines; 1 <= numMines ? i++ : i--) {
         mPosition = this.getRandomClearPosition();
         m = new Mine("mine" + i, mPosition.x * Map.CELL_SIZE_PX, mPosition.y * Map.CELL_SIZE_PX);
@@ -1990,7 +2000,7 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
     };
 
     Mine.prototype.update = function(dt, state) {
-      var id, object, _ref;
+      var gold, id, object, _ref, _ref2;
       this.dt += dt;
       if (this.dt >= 0.4) {
         this.dt = 0;
@@ -2007,6 +2017,16 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
             state.addScore(object.id, 1, 'gold');
           }
           state.removeObject(this.id);
+          gold = 0;
+          _ref2 = state.objects;
+          for (id in _ref2) {
+            object = _ref2[id];
+            if (object.__type === 'Mine') {
+              gold++;
+              break;
+            }
+          }
+          if (gold === 0) state.gameover = true;
           break;
         }
       }
@@ -2369,18 +2389,11 @@ require.define("/menu_boats.coffee", function (require, module, exports, __dirna
     };
 
     MenuBoats.prototype.draw = function() {
-      if (!(this.m_canvas != null)) {
-        this.context.clearRect(0, 0, this.width + 1, this.height + 1);
-        Map.getInstance().draw(this.context);
-        return this.frame_history[this.frame_num].draw(this.context, {
-          active: this.game.next_turn_id
-        });
-      } else {
-        Map.getInstance().draw(this.m_context, {
-          full_redraw: false
-        });
-        return this.context.drawImage(this.m_canvas, 0, 0);
-      }
+      Map.getInstance().draw(this.m_context, {
+        full_redraw: this.full_redraw
+      });
+      this.full_redraw = false;
+      return this.context.drawImage(this.m_canvas, 0, 0);
     };
 
     return MenuBoats;
@@ -3602,7 +3615,6 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     return $('#games .game').click(function(e) {
       var id;
       id = $(e.target).attr('data');
-      console.log(id, $(e.target));
       return window.gameClicked(id);
     });
   };
@@ -3642,6 +3654,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       return $("#menu").fadeOut(1000, function() {
         render = true;
         render_menu = false;
+        $("#buttons").hide();
         $("#controls").fadeIn(1000);
         return $("#game-canvas").fadeIn(1000);
       });
@@ -3659,10 +3672,11 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         if (!err) return drawGames(data.game_ids, data.games, api);
       });
     });
-    $('#load button').click(function() {
+    $('#load .back').click(function() {
       $("#buttons button").prop("disabled", false);
-      $("#buttons").fadeIn();
-      return $("#load").fadeOut();
+      return $("#load").fadeOut(1000, function() {
+        return $("#buttons").fadeIn(1000);
+      });
     });
     window.gameClicked = function(id) {
       render = false;
@@ -3680,15 +3694,29 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         return $("#menu").fadeOut(1000, function() {
           render = true;
           render_menu = false;
+          $("#load").hide();
           $("#controls").fadeIn(1000);
           return $("#game-canvas").fadeIn(1000);
         });
       });
     };
-    $("#addbutton").prop("disabled", true);
-    $("#addbutton").click(function() {
-      if (!(timeboats != null)) return;
-      return timeboats.addClick();
+    window.gameOver = function(game) {
+      $("#controls").fadeOut(1000);
+      render_menu = true;
+      render = false;
+      menu_boats.full_redraw = true;
+      return $("#game-canvas").fadeOut(1000, function() {
+        timeboats = null;
+        $("#menu-canvas").fadeIn(1000);
+        $("#menu").fadeIn(1000);
+        return $("#gameover").show();
+      });
+    };
+    $('#gameover .back').click(function() {
+      $("#buttons button").prop("disabled", false);
+      return $("#gameover").fadeOut(1000, function() {
+        return $("#buttons").fadeIn(1000);
+      });
     });
     $("#playbutton").click(function() {
       if (!(timeboats != null)) return;

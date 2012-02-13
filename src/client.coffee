@@ -18,7 +18,6 @@ drawGames = (game_ids, games, api) ->
 
   $('#games .game').click (e) ->
     id = $(e.target).attr('data')
-    console.log id, $(e.target)
     window.gameClicked id
 
 # Setup.
@@ -40,8 +39,6 @@ window.onload = ->
   timeboats = null
   render = false
 
-  # $('#to_menu').click
-
   $('#newgame').click =>
     render = false
     player1 = new Turns.Player 1, 0
@@ -62,6 +59,7 @@ window.onload = ->
     $("#menu").fadeOut 1000, =>
       render = true
       render_menu = false
+      $("#buttons").hide()
       $("#controls").fadeIn 1000
       $("#game-canvas").fadeIn 1000
 
@@ -81,11 +79,11 @@ window.onload = ->
       if not err
         drawGames data.game_ids, data.games, api
 
-  $('#load button').click =>
+  $('#load .back').click =>
     $("#buttons button").prop "disabled", false
-    $("#buttons").fadeIn()
-    $("#load").fadeOut()
-
+    $("#load").fadeOut 1000, ->
+      $("#buttons").fadeIn 1000
+    
   window.gameClicked = (id) =>
     render = false
     $('#loading').show()
@@ -102,61 +100,32 @@ window.onload = ->
       $("#menu").fadeOut 1000, =>
         render = true
         render_menu = false
+        $("#load").hide()
         $("#controls").fadeIn 1000
         $("#game-canvas").fadeIn 1000
 
-  # async.parallel {
-  #   game_ids: api.gameIds
-  #   games: api.getGames
-  # },
-  # (err, data) ->
-  #   game_ids = data.game_ids
-  #   games = data.games
+  window.gameOver = (game) =>
+    $("#controls").fadeOut 1000
+    render_menu = true
+    render = false
+    menu_boats.full_redraw = true
+    $("#game-canvas").fadeOut 1000, =>
+      timeboats = null
+      $("#menu-canvas").fadeIn 1000
+      $("#menu").fadeIn 1000
+      $("#gameover").show()
 
-  #   drawGames game_ids, games
-  #   console.log games, game_ids
-  #   if game_ids.length > 0
-  #     console.log "Loading game", game_ids[0]
-  #     game = api.getGame game_ids[0], (err, game) ->
-  #       if err
-  #         alert "couldn't load game " + id
-  #         return
-
-  #       console.log game_ids[0], games, game
-  #       timeboats = new Timeboats game, game_context, game_canvas.width, game_canvas.height, api, window.document
-  #       timeboats.turnClicked null
-  #       console.log game, timeboats
-  #       render = true
-
-  # $('#newgame').click =>
-  #   render = false
-  #   player1 = new Turns.Player 1, "white"
-  #   player2 = new Turns.Player 2, "red"
-  #   players = {1: player1, 2: player2}
-  #   order = [1, 2]
-
-  #   $("#playbutton").prop "disabled", true
-
-  #   game = new Turns.Game UUID.generate(), players, order
-  #   timeboats = new Timeboats game, game_context, game_canvas.width, game_canvas.height, api, window.document
-  #   timeboats.turnClicked null
-  #   render = true
-
-  $("#addbutton").prop "disabled", true
-
-  $("#addbutton").click =>
-    if not timeboats?
-      return
-    timeboats.addClick()
+   $('#gameover .back').click =>
+    $("#buttons button").prop "disabled", false
+    $("#gameover").fadeOut 1000, ->
+      $("#buttons").fadeIn 1000
 
   $("#playbutton").click =>
-    if not timeboats?
-      return
+    return if not timeboats?
     timeboats.playClick()
 
   $("#timeslider").change =>
-    if not timeboats?
-      return
+    return if not timeboats?
     timeboats.sliderDrag $("#timeslider").val()
 
   window.turnClicked = (number) =>

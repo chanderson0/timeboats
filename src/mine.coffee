@@ -33,8 +33,18 @@ exports.Mine = class Mine extends GameObject2D
           object.explode state
         else
           state.addScore object.id, 1, 'gold'
-
         state.removeObject @id
+
+        # Detect end game
+        gold = 0
+        for id, object of state.objects
+          if object.__type == 'Mine'
+            gold++
+            break
+        
+        if gold == 0
+          state.gameover = true
+
         break
 
     super dt

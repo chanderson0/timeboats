@@ -26,10 +26,6 @@ exports.MenuBoats = class MenuBoats
     Map.getInstance().update dt
 
   draw: ->
-    if not @m_canvas?
-      @context.clearRect 0, 0, @width + 1, @height + 1
-      Map.getInstance().draw @context
-      @frame_history[@frame_num].draw @context, active: @game.next_turn_id
-    else
-      Map.getInstance().draw @m_context, full_redraw: false
-      @context.drawImage @m_canvas, 0, 0
+    Map.getInstance().draw @m_context, full_redraw: @full_redraw
+    @full_redraw = false
+    @context.drawImage @m_canvas, 0, 0
