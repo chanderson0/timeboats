@@ -5,7 +5,7 @@ Map = require('./map.coffee').Map
 exports.Player = class Player extends Serializable
   __type: 'Player'
 
-  constructor: (@id = null, @color = "white") ->
+  constructor: (@id = null, @color = 0) ->
     if not @id?
       @id = UUID.generate()
 

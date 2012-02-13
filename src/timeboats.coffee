@@ -32,6 +32,10 @@ exports.Timeboats = class Timeboats
     for checkpoint in Map.getInstance().checkpoints
       initialState.addObject(checkpoint.id, checkpoint)
 
+    for mine in Map.getInstance().mines
+      initialState.addObject(mine.id, mine)
+    Map.getInstance().mines = []
+
     @frame_history.push initialState
 
     @full_redraw = true

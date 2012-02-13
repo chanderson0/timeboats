@@ -362,7 +362,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
   exports.Timeboats = Timeboats = (function() {
 
     function Timeboats(game, context, width, height, api, document) {
-      var checkpoint, gamePlayer, initialState, startDock, _i, _len, _ref;
+      var checkpoint, gamePlayer, initialState, mine, startDock, _i, _j, _len, _len2, _ref, _ref2;
       this.game = game;
       this.context = context;
       this.width = width;
@@ -387,6 +387,12 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         checkpoint = _ref[_i];
         initialState.addObject(checkpoint.id, checkpoint);
       }
+      _ref2 = Map.getInstance().mines;
+      for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+        mine = _ref2[_j];
+        initialState.addObject(mine.id, mine);
+      }
+      Map.getInstance().mines = [];
       this.frame_history.push(initialState);
       this.full_redraw = true;
       if (this.document != null) {
@@ -860,7 +866,7 @@ require.define("/serializable.coffee", function (require, module, exports, __dir
 
 require.define("/map.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Checkpoint, Dock, GameObject, Gaussian, Map, MapCell, Point, Random;
+  var Checkpoint, Dock, GameObject, Gaussian, Map, MapCell, Mine, Point, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject = require('./game_object').GameObject;
@@ -876,6 +882,8 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
   Checkpoint = require('./checkpoint.coffee').Checkpoint;
 
   Dock = require('./dock.coffee').Dock;
+
+  Mine = require('./mine.coffee').Mine;
 
   exports.Map = Map = (function() {
     var instance;
@@ -908,6 +916,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       this.damages = [];
       this.checkpoints = [];
       this.docks = [];
+      this.mines = [];
       Map.__super__.constructor.apply(this, arguments);
     }
 
@@ -1191,14 +1200,15 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
     };
 
     Map.prototype.generate = function(width, height, seed, players) {
-      var ck, ckPosition, clear, col, dock, i, numCheckpoints, numGaussians, player, playerId, x, y, _ref, _ref2, _ref3, _ref4;
+      var ck, ckPosition, clear, col, dock, i, m, mPosition, numCheckpoints, numGaussians, numMines, player, playerId, x, y, _ref, _ref2, _ref3, _ref4;
       this.width = width;
       this.height = height;
       this.random = new Random(seed);
-      this.docks = [];
       this.isInitialized = false;
       this.cells = [];
       this.checkpoints = [];
+      this.docks = [];
+      this.mines = [];
       for (x = 0, _ref = this.width - 1; 0 <= _ref ? x <= _ref : x >= _ref; 0 <= _ref ? x++ : x--) {
         col = [];
         for (y = 0, _ref2 = this.height - 1; 0 <= _ref2 ? y <= _ref2 : y >= _ref2; 0 <= _ref2 ? y++ : y--) {
@@ -1231,6 +1241,12 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
         ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX);
         ck.y += 5;
         this.checkpoints.push(ck);
+      }
+      numMines = 12;
+      for (i = 1; 1 <= numMines ? i <= numMines : i >= numMines; 1 <= numMines ? i++ : i--) {
+        mPosition = this.getRandomClearPosition();
+        m = new Mine("mine" + i, mPosition.x * Map.CELL_SIZE_PX, mPosition.y * Map.CELL_SIZE_PX);
+        this.mines.push(m);
       }
       for (playerId in players) {
         player = players[playerId];
@@ -1750,7 +1766,13 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
         go0: "go0.png",
         go1: "go1.png",
         getready0: "getready0.png",
-        getready1: "getready1.png"
+        getready1: "getready1.png",
+        mine0: "mine0.png",
+        mine1: "mine1.png",
+        boat0: "boat0.png",
+        boat1: "boat1.png",
+        boat2: "boat2.png",
+        boat3: "boat3.png"
       };
       this.numAssets = this.urls.length;
       this.numLoaded = 0;
@@ -1856,6 +1878,74 @@ require.define("/dock.coffee", function (require, module, exports, __dirname, __
 
 });
 
+require.define("/mine.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var AssetLoader, GameObject2D, Mine, Point, Random;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
+
+  AssetLoader = require('./asset_loader.coffee').AssetLoader;
+
+  Point = require('./point.coffee').Point;
+
+  Random = require('./random.coffee').Random;
+
+  exports.Mine = Mine = (function() {
+
+    __extends(Mine, GameObject2D);
+
+    Mine.prototype.__type = 'Mine';
+
+    function Mine(id, x, y) {
+      this.id = id;
+      this.x = x;
+      this.y = y;
+      Mine.__super__.constructor.call(this, this.id, this.x, this.y);
+      this.frame = 0;
+      this.dt = new Random(this.x + this.y).nextf() * 0.15;
+      this.radius = 15;
+    }
+
+    Mine.prototype.clone = function() {
+      var c;
+      c = new Mine(this.id, this.x, this.y);
+      c.frame = this.frame;
+      c.dt = this.dt;
+      return c;
+    };
+
+    Mine.prototype.update = function(dt, state) {
+      var id, object, _ref;
+      this.dt += dt;
+      if (this.dt >= 0.4) {
+        this.dt = 0;
+        this.frame++;
+        this.frame %= 2;
+      }
+      _ref = state.objects;
+      for (id in _ref) {
+        object = _ref[id];
+        if (object.__type === 'Square' && Point.getDistance(this.x + 16, this.y + 16, object.x, object.y) < this.radius) {
+          object.explode(state);
+          state.removeObject(this.id);
+        }
+      }
+      return Mine.__super__.update.call(this, dt);
+    };
+
+    Mine.prototype.draw = function(context) {
+      return context.drawImage(AssetLoader.getInstance().getAsset("mine" + this.frame), this.x, this.y, 31, 31);
+    };
+
+    return Mine;
+
+  })();
+
+}).call(this);
+
+});
+
 require.define("/square.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
   var AssetLoader, Explosion, GameObject2D, Map, Point, Square;
@@ -1877,12 +1967,12 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 
     Square.prototype.__type = 'Square';
 
-    function Square(id, x, y, size, fill) {
+    function Square(id, x, y, size, color) {
       this.id = id;
       this.x = x;
       this.y = y;
       this.size = size;
-      this.fill = fill != null ? fill : "white";
+      this.color = color != null ? color : 0;
       Square.__super__.constructor.call(this, this.id, this.x, this.y, 0, 0, -1.57);
       this.destx = this.x;
       this.desty = this.y;
@@ -1891,7 +1981,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 
     Square.prototype.clone = function() {
       var sq;
-      sq = new Square(this.id, this.x, this.y, this.size, this.fill);
+      sq = new Square(this.id, this.x, this.y, this.size, this.color);
       sq.rotation = this.rotation;
       sq.vx = this.vx;
       sq.vy = this.vy;
@@ -1937,10 +2027,9 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
     Square.prototype.draw = function(context, options) {
       context.save();
       if ((options != null) && options.dim) context.globalAlpha = 0.5;
-      context.fillStyle = this.fill;
       context.translate(this.x, this.y);
       context.rotate(this.rotation);
-      context.drawImage(AssetLoader.getInstance().getAsset("boat"), -this.size / 2, -this.size / 2, this.size, this.size);
+      context.drawImage(AssetLoader.getInstance().getAsset("boat" + this.color), -this.size / 2, -this.size / 2, this.size, this.size);
       return context.restore();
     };
 
@@ -2232,7 +2321,7 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
 
     function Player(id, color) {
       this.id = id != null ? id : null;
-      this.color = color != null ? color : "white";
+      this.color = color != null ? color : 0;
       if (!(this.id != null)) this.id = UUID.generate();
       Player.__super__.constructor.apply(this, arguments);
     }
@@ -3414,8 +3503,8 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     $('#newgame').click(function() {
       var order, player1, player2, players;
       render = false;
-      player1 = new Turns.Player(1, "white");
-      player2 = new Turns.Player(2, "red");
+      player1 = new Turns.Player(1, 0);
+      player2 = new Turns.Player(2, 1);
       players = {
         1: player1,
         2: player2

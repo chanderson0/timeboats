@@ -44,20 +44,20 @@ window.onload = ->
 
   $('#newgame').click =>
     render = false
-    player1 = new Turns.Player 1, "white"
-    player2 = new Turns.Player 2, "red"
+    player1 = new Turns.Player 1, 0
+    player2 = new Turns.Player 2, 1
     players = {1: player1, 2: player2}
     order = [1, 2]
 
     $("#playbutton").prop "disabled", true
-    
+
     game = new Turns.Game UUID.generate(), players, order
     timeboats = new Timeboats game, game_context, game_canvas.width, game_canvas.height, api, window.document
     timeboats.turnClicked null
-    
+
     render = true
     render_menu = false
-    
+
     $("#menu-canvas").fadeOut 1000
     $("#menu").fadeOut 1000, =>
       render = true
@@ -75,7 +75,7 @@ window.onload = ->
     async.parallel {
       game_ids: api.gameIds
       games: api.getGames
-    }, 
+    },
     (err, data) ->
       $('#loading').hide()
       if not err
@@ -97,18 +97,18 @@ window.onload = ->
 
       timeboats = new Timeboats game, game_context, game_canvas.width, game_canvas.height, api, window.document
       timeboats.turnClicked null
-      
+
       $("#menu-canvas").fadeOut 1000
       $("#menu").fadeOut 1000, =>
         render = true
         render_menu = false
         $("#controls").fadeIn 1000
         $("#game-canvas").fadeIn 1000
-  
+
   # async.parallel {
   #   game_ids: api.gameIds
   #   games: api.getGames
-  # }, 
+  # },
   # (err, data) ->
   #   game_ids = data.game_ids
   #   games = data.games
@@ -121,7 +121,7 @@ window.onload = ->
   #       if err
   #         alert "couldn't load game " + id
   #         return
-        
+
   #       console.log game_ids[0], games, game
   #       timeboats = new Timeboats game, game_context, game_canvas.width, game_canvas.height, api, window.document
   #       timeboats.turnClicked null
@@ -136,7 +136,7 @@ window.onload = ->
   #   order = [1, 2]
 
   #   $("#playbutton").prop "disabled", true
-    
+
   #   game = new Turns.Game UUID.generate(), players, order
   #   timeboats = new Timeboats game, game_context, game_canvas.width, game_canvas.height, api, window.document
   #   timeboats.turnClicked null
@@ -204,7 +204,7 @@ window.onload = ->
       while gdt > render_obj.timestep
         gdt = gdt - render_obj.timestep
         render_obj.update render_obj.timestep
-      
+
       rdt = rdt + dt
       if rdt > render_obj.renderstep
         rdt = rdt - render_obj.renderstep
