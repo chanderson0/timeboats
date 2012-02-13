@@ -29,8 +29,13 @@ exports.Mine = class Mine extends GameObject2D
 
     for id, object of state.objects
       if object.__type == 'Square' and Point.getDistance(@x + 16, @y + 16, object.x, object.y) < @radius
-        object.explode state
+        if not @isGold
+          object.explode state
+        else
+          state.addScore object.id, 1, 'gold'
+
         state.removeObject @id
+        break
 
     super dt
 

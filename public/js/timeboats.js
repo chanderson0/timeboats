@@ -2001,8 +2001,13 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
       for (id in _ref) {
         object = _ref[id];
         if (object.__type === 'Square' && Point.getDistance(this.x + 16, this.y + 16, object.x, object.y) < this.radius) {
-          object.explode(state);
+          if (!this.isGold) {
+            object.explode(state);
+          } else {
+            state.addScore(object.id, 1, 'gold');
+          }
           state.removeObject(this.id);
+          break;
         }
       }
       return Mine.__super__.update.call(this, dt);
