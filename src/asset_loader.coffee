@@ -40,6 +40,7 @@ exports.AssetLoader = class AssetLoader
       boat1: "boat1.png"
       boat2: "boat2.png"
       boat3: "boat3.png"
+      gold: "gold.png"
 
     @numAssets = @urls.length
     @numLoaded = 0

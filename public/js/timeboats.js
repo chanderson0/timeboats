@@ -1649,7 +1649,7 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
     };
 
     Checkpoint.prototype.update = function(dt, state) {
-      var id, object, _ref;
+      var allChecked, id, object, _ref, _ref2, _ref3;
       this.dt += dt;
       if (this.dt >= 0.4) {
         this.dt = 0;
@@ -1664,6 +1664,26 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
           state.addScore(object.id, 1, 'checkpoint');
           object.explode(state);
           this.checked = true;
+          break;
+        }
+      }
+      allChecked = false;
+      if (this.checked) {
+        allChecked = true;
+        _ref2 = state.objects;
+        for (id in _ref2) {
+          object = _ref2[id];
+          if (object.__type === 'Checkpoint' && !object.checked) {
+            allChecked = false;
+            break;
+          }
+        }
+      }
+      if (allChecked) {
+        _ref3 = state.objects;
+        for (id in _ref3) {
+          object = _ref3[id];
+          if (object.__type === 'Mine') object.isGold = true;
         }
       }
       return Checkpoint.__super__.update.call(this, dt);
@@ -1816,7 +1836,8 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
         boat0: "boat0.png",
         boat1: "boat1.png",
         boat2: "boat2.png",
-        boat3: "boat3.png"
+        boat3: "boat3.png",
+        gold: "gold.png"
       };
       this.numAssets = this.urls.length;
       this.numLoaded = 0;
@@ -1956,6 +1977,7 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
       this.frame = 0;
       this.dt = new Random(this.x + this.y).nextf();
       this.radius = 15;
+      this.isGold = false;
     }
 
     Mine.prototype.clone = function() {
@@ -1963,6 +1985,7 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
       c = new Mine(this.id, this.x, this.y);
       c.frame = this.frame;
       c.dt = this.dt;
+      c.isGold = this.isGold;
       return c;
     };
 
@@ -1986,7 +2009,11 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
     };
 
     Mine.prototype.draw = function(context) {
-      return context.drawImage(AssetLoader.getInstance().getAsset("mine" + this.frame), this.x, this.y, 31, 31);
+      if (this.isGold) {
+        return context.drawImage(AssetLoader.getInstance().getAsset("gold"), this.x - 5, this.y - 3, 37, 27);
+      } else {
+        return context.drawImage(AssetLoader.getInstance().getAsset("mine" + this.frame), this.x, this.y, 31, 31);
+      }
     };
 
     return Mine;

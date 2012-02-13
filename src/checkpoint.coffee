@@ -35,6 +35,21 @@ exports.Checkpoint = class Checkpoint extends GameObject2D
         state.addScore object.id, 1, 'checkpoint'
         object.explode state
         @checked = true
+        break
+
+    allChecked = false
+    if @checked
+      allChecked = true
+      for id, object of state.objects
+        if object.__type == 'Checkpoint' and not object.checked
+          allChecked = false
+          break
+
+    # TURN THEM INTO GOooOOOLlddd!
+    if allChecked
+      for id, object of state.objects
+        if object.__type == 'Mine'
+          object.isGold = true
 
     super dt
 

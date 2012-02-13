@@ -11,11 +11,13 @@ exports.Mine = class Mine extends GameObject2D
     @frame = 0
     @dt = new Random(@x + @y).nextf()
     @radius = 15
+    @isGold = false
 
   clone: ->
     c = new Mine(@id, @x, @y)
     c.frame = @frame
     c.dt = @dt
+    c.isGold = @isGold
     return c
 
   update: (dt, state) ->
@@ -33,4 +35,7 @@ exports.Mine = class Mine extends GameObject2D
     super dt
 
   draw: (context) ->
-    context.drawImage(AssetLoader.getInstance().getAsset("mine" + @frame), @x, @y, 31, 31)
+    if @isGold
+      context.drawImage(AssetLoader.getInstance().getAsset("gold"), @x - 5, @y - 3, 37,27)
+    else
+      context.drawImage(AssetLoader.getInstance().getAsset("mine" + @frame), @x, @y, 31, 31)
