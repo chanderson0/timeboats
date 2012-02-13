@@ -407,6 +407,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       gamePlayer = this.game.currentPlayer();
       startDock = Map.getInstance().docks[gamePlayer.id];
       startDock.active = 'ready';
+      this.time = 0;
       this.game.render();
     }
 
@@ -427,7 +428,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.updateState = function(oldState, newState) {
-      var command, gamePlayer, player, startDock;
+      var command, gamePlayer, map, player, scores, startDock, state;
       console.log(oldState, '->', newState);
       if ((oldState === "init" || oldState === "ready") && newState === "recording") {
         this.placeholder = null;
@@ -441,8 +442,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.gamestate = "recording";
         $("#playbutton").html("Stop");
         $("#playbutton").prop("disabled", true);
-        $("#addbutton").html("Ready Next");
-        $("#addbutton").prop("disabled", true);
         return $("#timeslider").prop("disabled", true);
       } else if ((oldState === "init" || oldState === "paused") && newState === "rerecording") {
         this.gamestate = "rerecording";
@@ -451,8 +450,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         startDock.active = 'ready';
         $("#playbutton").html("Stop");
         $("#playbutton").prop("disabled", true);
-        $("#addbutton").html("Ready Next");
-        $("#addbutton").prop("disabled", true);
         return $("#timeslider").prop("disabled", false);
       } else if (oldState === "rerecording" && newState === "paused") {
         this.gamestate = "paused";
@@ -465,8 +462,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
           $("#playbutton").html("Play");
           $("#playbutton").prop("disabled", false);
         }
-        $("#addbutton").html("Ready Next");
-        $("#addbutton").prop("disabled", false);
         return $("#timeslider").prop("disabled", false);
       } else if (oldState === "recording" && newState === "paused") {
         this.game.recordTurn(this.active_commands);
@@ -475,6 +470,12 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         gamePlayer = this.game.currentPlayer();
         startDock = Map.getInstance().docks[gamePlayer.id];
         startDock.active = 'ready';
+        state = this.frame_history[this.frame_num];
+        map = this.game.turnsToPlayers();
+        scores = state.playerScores(map);
+        this.game.setScores(scores, state.time);
+        this.game.render();
+        console.log(state, map, scores, this.game);
         this.setFrameNum(0);
         this.full_redraw = true;
         if (this.api != null) {
@@ -487,8 +488,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
           $("#playbutton").html("Play");
           $("#playbutton").prop("disabled", false);
         }
-        $("#addbutton").html("Ready Next");
-        $("#addbutton").prop("disabled", false);
         return $("#timeslider").prop("disabled", false);
       } else if (oldState === "paused" && newState === "playing") {
         this.gamestate = "playing";
@@ -497,11 +496,10 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         startDock.active = 'ready';
         $("#playbutton").html("Pause");
         $("#playbutton").prop("disabled", false);
-        $("#addbutton").html("Ready Next");
-        $("#addbutton").prop("disabled", true);
         return $("#timeslider").prop("disabled", true);
       } else if (oldState === "paused" && newState === "ready") {
         this.setFrameNum(0);
+        this.time = 0;
         if (!this.game.isLatestTurn()) {
           this.game.setTurn(this.game.latestTurnNumber());
           this.command_history = this.game.computeCommands();
@@ -513,8 +511,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.gamestate = "ready";
         $("#playbutton").html("Start");
         $("#playbutton").prop("disabled", false);
-        $("#addbutton").html("Ready Next");
-        $("#addbutton").prop("disabled", true);
         return $("#timeslider").prop("disabled", true);
       } else if ((oldState === "playing" || oldState === "ready") && newState === "paused") {
         this.gamestate = "paused";
@@ -522,8 +518,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         startDock = Map.getInstance().docks[gamePlayer.id];
         startDock.active = 'ready';
         $("#playbutton").html("Play");
-        $("#addbutton").html("Ready Next");
-        $("#addbutton").prop("disabled", false);
         return $("#timeslider").prop("disabled", false);
       } else {
         return console.log("couldn't switch state");
@@ -576,8 +570,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       var id, next_state, object, player_count, _ref;
       Map.getInstance().update(dt);
       if (this.gamestate === "recording" || this.gamestate === "rerecording") {
+        this.time += dt;
         Map.getInstance().setFrame(this.frame_num + 1, true);
-        next_state = this.frame_history[this.frame_num].clone();
+        next_state = this.frame_history[this.frame_num].clone(this.time);
         next_state.setCommands(this.command_history[this.frame_num] || []);
         next_state.update(dt);
         this.setFrameNum(this.frame_num + 1);
@@ -695,19 +690,32 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
 
     State.prototype.__type = 'State';
 
-    function State() {
+    function State(time) {
+      this.time = time != null ? time : null;
       this.draw = __bind(this.draw, this);
-      this.removeObject = __bind(this.removeObject, this);      this.objects = {};
+      this.removeObject = __bind(this.removeObject, this);
+      this.objects = {};
       this.commands = [];
+      this.scores = {};
       this.full_redraw = false;
     }
 
-    State.prototype.clone = function() {
-      var id, object, st, _ref;
-      st = new State();
-      _ref = this.objects;
+    State.prototype.clone = function(time) {
+      var id, object, scores, scoretype, st, value, _ref, _ref2;
+      if (time == null) time = null;
+      st = new State(time);
+      _ref = this.scores;
       for (id in _ref) {
-        object = _ref[id];
+        scores = _ref[id];
+        st.scores[id] = {};
+        for (scoretype in scores) {
+          value = scores[scoretype];
+          st.scores[id][scoretype] = value;
+        }
+      }
+      _ref2 = this.objects;
+      for (id in _ref2) {
+        object = _ref2[id];
         st.objects[id] = object.clone();
       }
       return st;
@@ -731,6 +739,30 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
         return delete _this.objects[id];
       });
       return this.full_redraw = true;
+    };
+
+    State.prototype.addScore = function(id, score, scoretype) {
+      console.log(id, score, scoretype);
+      if (!(this.scores[id] != null)) this.scores[id] = {};
+      if (!(this.scores[id][scoretype] != null)) this.scores[id][scoretype] = 0;
+      return this.scores[id][scoretype] += score;
+    };
+
+    State.prototype.playerScores = function(mapping) {
+      var id, player_id, ret, scores, scoretype, value, _ref;
+      ret = {};
+      _ref = this.scores;
+      for (id in _ref) {
+        scores = _ref[id];
+        player_id = mapping[id];
+        for (scoretype in scores) {
+          value = scores[scoretype];
+          if (!(ret[player_id] != null)) ret[player_id] = {};
+          if (!(ret[player_id][scoretype] != null)) ret[player_id][scoretype] = 0;
+          ret[player_id][scoretype] += value;
+        }
+      }
+      return ret;
     };
 
     State.prototype.update = function(dt) {
@@ -1620,6 +1652,7 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
       for (id in _ref) {
         object = _ref[id];
         if (object.__type === 'Square' && Point.getDistance(this.x + 21, this.y + 24, object.x, object.y) < this.radius) {
+          state.addScore(object.id, 1, 'checkpoint');
           object.explode(state);
           this.checked = true;
         }
@@ -1995,7 +2028,8 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       id = Math.floor(Math.random() * 1000000);
       explosion = new Explosion(id, this.x, this.y, 90);
       state.addObject(id, explosion);
-      return state.removeObject(this.id);
+      state.removeObject(this.id);
+      return state.addScore(this.id, 1, 'boat');
     };
 
     Square.prototype.setVel = function(vx, vy) {
@@ -2126,7 +2160,6 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
       context.translate(this.x, this.y);
       context.globalAlpha = 0.7 * (this.ttl / this.lifespan);
       for (i = 0, _ref3 = numSmokes - 1; 0 <= _ref3 ? i <= _ref3 : i >= _ref3; 0 <= _ref3 ? i++ : i--) {
-        console.log(numSmokes);
         size = 64 * smokeScales[i];
         context.drawImage(AssetLoader.getInstance().getAsset("smoke" + smokeTypes[i]), smokePositions[i][0] - size / 2, smokePositions[i][1] - size / 2, size, size);
       }
@@ -2319,10 +2352,15 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
 
     Player.prototype.__type = 'Player';
 
-    function Player(id, color) {
+    function Player(id, color, nickname) {
       this.id = id != null ? id : null;
       this.color = color != null ? color : 0;
+      this.nickname = nickname != null ? nickname : null;
       if (!(this.id != null)) this.id = UUID.generate();
+      if (!(this.nickname != null)) {
+        this.nickname = ("" + this.id).substring(0, 10);
+      }
+      this.score = 0;
       Player.__super__.constructor.apply(this, arguments);
     }
 
@@ -2389,7 +2427,7 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
         active: active ? 'active' : '',
         id: player.id,
         name: player.color,
-        score: 0
+        score: player.score
       });
       if (update) {
         return $('#' + player.id).replaceWith(html);
@@ -2450,12 +2488,40 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
       return this.getPlayerByIndex(this.current_player_id);
     };
 
+    Game.prototype.turnsToPlayers = function() {
+      var ret, turn, _i, _len, _ref;
+      ret = {};
+      _ref = this.turns;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        turn = _ref[_i];
+        ret[turn.id] = turn.player_id;
+      }
+      return ret;
+    };
+
+    Game.prototype.setScores = function(scoremap, time) {
+      var boats, checkpoints, gold, player_id, score, scores, _results;
+      _results = [];
+      for (player_id in scoremap) {
+        scores = scoremap[player_id];
+        boats = scores['boat'] || 0;
+        checkpoints = scores['checkpoint'] || 0;
+        gold = scores['gold'] || 0;
+        score = this.computeScore(time, checkpoints, boats, gold);
+        _results.push(this.players[player_id].score = score);
+      }
+      return _results;
+    };
+
+    Game.prototype.computeScore = function(time, checkpoints, boats, gold) {
+      return gold + checkpoints + boats;
+    };
+
     Game.prototype.recordTurn = function(commands) {
       var turn;
-      turn = new Turn(this.turn_id, this.currentPlayer().id, commands);
+      turn = new Turn(this.next_turn_id, this.currentPlayer().id, commands);
       this.turns.push(turn);
       this.turn_idx = this.latestTurnNumber();
-      console.log('recordTurn');
       this.render();
       return turn;
     };

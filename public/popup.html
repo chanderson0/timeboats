@@ -21,22 +21,14 @@
         <img class="logo" src="img/paradocks_shadow.png" />
         <div id="loading">
           <div id="circular3dG">
-          <div id="circular3d_1G" class="circular3dG">
-          </div>
-          <div id="circular3d_2G" class="circular3dG">
-          </div>
-          <div id="circular3d_3G" class="circular3dG">
-          </div>
-          <div id="circular3d_4G" class="circular3dG">
-          </div>
-          <div id="circular3d_5G" class="circular3dG">
-          </div>
-          <div id="circular3d_6G" class="circular3dG">
-          </div>
-          <div id="circular3d_7G" class="circular3dG">
-          </div>
-          <div id="circular3d_8G" class="circular3dG">
-          </div>
+            <div id="circular3d_1G" class="circular3dG"></div>
+            <div id="circular3d_2G" class="circular3dG"></div>
+            <div id="circular3d_3G" class="circular3dG"></div>
+            <div id="circular3d_4G" class="circular3dG"></div>
+            <div id="circular3d_5G" class="circular3dG"></div>
+            <div id="circular3d_6G" class="circular3dG"></div>
+            <div id="circular3d_7G" class="circular3dG"></div>
+            <div id="circular3d_8G" class="circular3dG"></div>
           </div>
         </div>
         <div id="buttons">
@@ -67,10 +59,6 @@
         <span class="title">Turns</span>
         <div id="turn_tiles"></div>
       </div>
-      <div id="player_controls">
-        <button id="addbutton">Record Move</button>
-        <!--<button id="newplayer">New Player</button>-->
-      </div>
     </div>
   </div>
 
@@ -78,6 +66,7 @@
   <script id="player_template" type='text/ejs'>
     <div id="[%= id %]" class="player [%= active %]">
       <span class="player_name">[%= name %]</span>
+      <span class="player_score">[%= score %]</span>
     </div>
   </script>
 

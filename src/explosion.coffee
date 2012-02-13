@@ -56,7 +56,6 @@ exports.Explosion = class Explosion extends GameObject2D
     context.globalAlpha = 0.7 * (@ttl / @lifespan)
 
     for i in [0..numSmokes - 1]
-      console.log numSmokes
       size = 64 * smokeScales[i]
       context.drawImage(
         AssetLoader.getInstance().getAsset("smoke" + smokeTypes[i]),
