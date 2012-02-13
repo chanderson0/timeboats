@@ -265,9 +265,10 @@ exports.Timeboats = class Timeboats
       @addCommand @command_history, command
       @addCommand @active_commands, command
     else if @gamestate == "ready" 
-      console.log Point.getDistance(e.offsetX, e.offsetY, @placeholder.x, @placeholder.y)
-      if @placeholder.containsPoint e.offsetX, e.offsetY
-        @updateState "init", "recording"
+      gamePlayer = @game.currentPlayer()
+      startDock = Map.getInstance().docks[gamePlayer.id]
+      if startDock.containsPoint e.offsetX, e.offsetY
+        @updateState @gamestate, "recording"
 
   onMouseMove: (e) =>
     if @gamestate == "recording"
