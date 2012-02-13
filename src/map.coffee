@@ -90,11 +90,15 @@ exports.Map = class Map extends GameObject
             context.fillRect cellX, cellY, Map.CELL_SIZE_PX, Map.CELL_SIZE_PX
 
       context.restore()
+      @drawNonTerrain context
 
   drawNonTerrain: (context) ->
     if @isInitialized
       for playerId, dock of @docks
-        dock.draw(context)
+        region = dock.redrawRegion()
+        @drawRegion context, region: region
+        dock.draw context
+
 
   drawRegion: (context, options = {}) ->
     if @isInitialized

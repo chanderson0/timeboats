@@ -1,10 +1,10 @@
-GameObject = require('./game_object.coffee').GameObject
+GameObject2D = require('./game_object_2d.coffee').GameObject2D
 Point = require('./point.coffee').Point
 Map = require('./map.coffee').Map
 Random = require('./random.coffee').Random
 AssetLoader = require('./asset_loader.coffee').AssetLoader
 
-exports.Explosion = class Explosion extends GameObject
+exports.Explosion = class Explosion extends GameObject2D
   __type: 'Explosion'
 
   constructor: (@id, @x, @y, @max_radius) ->
@@ -56,6 +56,7 @@ exports.Explosion = class Explosion extends GameObject
     context.globalAlpha = 0.7 * (@ttl / @lifespan)
 
     for i in [0..numSmokes - 1]
+      console.log numSmokes
       size = 64 * smokeScales[i]
       context.drawImage(
         AssetLoader.getInstance().getAsset("smoke" + smokeTypes[i]),

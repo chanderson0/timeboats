@@ -418,7 +418,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.updateState = function(oldState, newState) {
-      var command, gamePlayer, player, startDock, startPos;
+      var command, gamePlayer, player, startDock;
       console.log(oldState, '->', newState);
       if ((oldState === "init" || oldState === "ready") && newState === "recording") {
         this.placeholder = null;
@@ -486,9 +486,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
           this.frame_history = [this.frame_history[0]];
         }
         this.gamestate = "ready";
-        gamePlayer = this.game.currentPlayer();
-        startPos = Map.getInstance().playerStartPositions[gamePlayer.id];
-        this.placeholder = new Square(this.game.next_turn_id, startPos.x * Map.CELL_SIZE_PX, startPos.y * Map.CELL_SIZE_PX, 32, gamePlayer.color);
         $("#playbutton").html("Start");
         $("#playbutton").prop("disabled", false);
         $("#addbutton").html("Ready Next");
@@ -592,10 +589,11 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       if (!(this.m_canvas != null)) {
         this.context.clearRect(0, 0, this.width + 1, this.height + 1);
         Map.getInstance().draw(this.context);
-        this.frame_history[this.frame_num].draw(this.context, {
+        return this.frame_history[this.frame_num].draw(this.context, {
           active: this.game.next_turn_id
         });
       } else {
+        this.frame_history[this.frame_num].drawRegions(this.m_context);
         Map.getInstance().draw(this.m_context, {
           full_redraw: this.full_redraw
         });
@@ -603,14 +601,8 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.frame_history[this.frame_num].draw(this.m_context, {
           active: this.game.next_turn_id
         });
-        if (this.placeholder != null) {
-          this.placeholder.draw(this.m_context, {
-            active: this.placeholder.id
-          });
-        }
-        this.context.drawImage(this.m_canvas, 0, 0);
+        return this.context.drawImage(this.m_canvas, 0, 0);
       }
-      return Map.getInstance().drawNonTerrain(this.context);
     };
 
     Timeboats.prototype.onMouseDown = function(e) {
@@ -716,30 +708,30 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
       return true;
     };
 
+    State.prototype.drawRegions = function(context) {
+      var id, object, region, _ref, _results;
+      _ref = this.objects;
+      _results = [];
+      for (id in _ref) {
+        object = _ref[id];
+        region = object.redrawRegion();
+        _results.push(Map.getInstance().drawRegion(context, {
+          region: region
+        }));
+      }
+      return _results;
+    };
+
     State.prototype.draw = function(context, options) {
-      var id, object, region, _ref, _ref2;
+      var id, object, _ref;
       if (this.full_redraw) {
         Map.getInstance().draw(context, {
           full_redraw: true
         });
-      } else {
-        _ref = this.objects;
-        for (id in _ref) {
-          object = _ref[id];
-          region = {
-            x: object.x - object.radius * 2,
-            y: object.y - object.radius * 2,
-            width: object.radius * 4,
-            height: object.radius * 4
-          };
-          Map.getInstance().drawRegion(context, {
-            region: region
-          });
-        }
       }
-      _ref2 = this.objects;
-      for (id in _ref2) {
-        object = _ref2[id];
+      _ref = this.objects;
+      for (id in _ref) {
+        object = _ref[id];
         object.draw(context, {
           dim: options.active !== id
         });
@@ -955,17 +947,22 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
             }
           }
         }
-        return context.restore();
+        context.restore();
+        return this.drawNonTerrain(context);
       }
     };
 
     Map.prototype.drawNonTerrain = function(context) {
-      var dock, playerId, _ref, _results;
+      var dock, playerId, region, _ref, _results;
       if (this.isInitialized) {
         _ref = this.docks;
         _results = [];
         for (playerId in _ref) {
           dock = _ref[playerId];
+          region = dock.redrawRegion();
+          this.drawRegion(context, {
+            region: region
+          });
           _results.push(dock.draw(context));
         }
         return _results;
@@ -1650,6 +1647,16 @@ require.define("/game_object_2d.coffee", function (require, module, exports, __d
       return this.setPos(newPos.x, newPos.y);
     };
 
+    GameObject2D.prototype.redrawRegion = function() {
+      var region;
+      return region = {
+        x: this.x - this.radius * 2,
+        y: this.y - this.radius * 2,
+        width: this.radius * 4,
+        height: this.radius * 4
+      };
+    };
+
     GameObject2D.prototype.containsPoint = function(x, y) {
       return Point.getDistance(x, y, this.x, this.y) < this.radius;
     };
@@ -1902,10 +1909,10 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 
 require.define("/explosion.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var AssetLoader, Explosion, GameObject, Map, Point, Random;
+  var AssetLoader, Explosion, GameObject2D, Map, Point, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  GameObject = require('./game_object.coffee').GameObject;
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
 
   Point = require('./point.coffee').Point;
 
@@ -1917,7 +1924,7 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
 
   exports.Explosion = Explosion = (function() {
 
-    __extends(Explosion, GameObject);
+    __extends(Explosion, GameObject2D);
 
     Explosion.prototype.__type = 'Explosion';
 
@@ -1981,6 +1988,7 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
       context.translate(this.x, this.y);
       context.globalAlpha = 0.7 * (this.ttl / this.lifespan);
       for (i = 0, _ref3 = numSmokes - 1; 0 <= _ref3 ? i <= _ref3 : i >= _ref3; 0 <= _ref3 ? i++ : i--) {
+        console.log(numSmokes);
         size = 64 * smokeScales[i];
         context.drawImage(AssetLoader.getInstance().getAsset("smoke" + smokeTypes[i]), smokePositions[i][0] - size / 2, smokePositions[i][1] - size / 2, size, size);
       }

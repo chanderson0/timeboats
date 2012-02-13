@@ -141,10 +141,6 @@ exports.Timeboats = class Timeboats
 
       @gamestate = "ready"
 
-      gamePlayer = @game.currentPlayer()
-      startPos = Map.getInstance().playerStartPositions[gamePlayer.id]
-      @placeholder = new Square(@game.next_turn_id, startPos.x * Map.CELL_SIZE_PX, startPos.y * Map.CELL_SIZE_PX, 32, gamePlayer.color)
-
       $("#playbutton").html "Start"
       $("#playbutton").prop "disabled", false
       $("#addbutton").html "Ready Next"
@@ -247,15 +243,11 @@ exports.Timeboats = class Timeboats
       Map.getInstance().draw @context
       @frame_history[@frame_num].draw @context, active: @game.next_turn_id
     else
+      @frame_history[@frame_num].drawRegions @m_context
       Map.getInstance().draw @m_context, full_redraw: @full_redraw
       @full_redraw = false
       @frame_history[@frame_num].draw @m_context, active: @game.next_turn_id
-      
-      if @placeholder?
-        @placeholder.draw @m_context, active: @placeholder.id
-
       @context.drawImage @m_canvas, 0, 0
-    Map.getInstance().drawNonTerrain(@context)
 
   onMouseDown: (e) =>
     if @gamestate == "recording"
