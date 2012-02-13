@@ -5,6 +5,7 @@ Gaussian = require('./gaussian.coffee').Gaussian
 Point = require('./point.coffee').Point
 Checkpoint = require('./checkpoint.coffee').Checkpoint
 Dock = require('./dock.coffee').Dock
+Mine = require('./mine.coffee').Mine
 
 exports.Map = class Map extends GameObject
   __type: 'Map'
@@ -33,6 +34,7 @@ exports.Map = class Map extends GameObject
     @damages = []
     @checkpoints = []
     @docks = []
+    @mines = []
     super
 
   clone: -> instance
@@ -224,12 +226,13 @@ exports.Map = class Map extends GameObject
     @width = width
     @height = height
     @random = new Random(seed)
-    @docks = []
 
     # initialize a blank map
     @isInitialized = false
     @cells = []
     @checkpoints = []
+    @docks = []
+    @mines = []
 
     for x in [0..@width - 1]
       col = []
@@ -269,6 +272,13 @@ exports.Map = class Map extends GameObject
       ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX)
       ck.y += 5
       @checkpoints.push ck
+
+    # now add some mines.
+    numMines = 12
+    for i in [1..numMines]
+      mPosition = @getRandomClearPosition()
+      m = new Mine("mine" + i, mPosition.x * Map.CELL_SIZE_PX, mPosition.y * Map.CELL_SIZE_PX)
+      @mines.push m
 
     # now figure out where the players should start their turns.
     for playerId, player of players

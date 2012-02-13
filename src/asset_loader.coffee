@@ -28,6 +28,8 @@ exports.AssetLoader = class AssetLoader
       smoke0: "smoke1.png"
       smoke1: "smoke2.png"
       smoke2: "circle4.png"
+      mine0: "mine0.png"
+      mine1: "mine1.png"
 
     @numAssets = @urls.length
     @numLoaded = 0
