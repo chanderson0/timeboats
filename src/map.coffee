@@ -291,7 +291,7 @@ exports.Map = class Map extends GameObject
     # now figure out where the players should start their turns.
     for playerId, player of players
       clear = @getRandomClearPosition()
-      dock = new Dock("dock" + playerId, clear.x * Map.CELL_SIZE_PX, clear.y * Map.CELL_SIZE_PX)
+      dock = new Dock("dock" + playerId, clear.x * Map.CELL_SIZE_PX, clear.y * Map.CELL_SIZE_PX, player.color)
       @docks[playerId] = dock
 
     @isInitialized = true
