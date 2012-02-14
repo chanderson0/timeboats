@@ -49,20 +49,34 @@
         <canvas id="menu-canvas" height="560" width="720"></canvas>
         <canvas id="game-canvas" height="560" width="720"></canvas>
       </div>
-      <div id="controls">
-        <button id="playbutton">Play</button>
-        <input id="timeslider" type="range" min="0" max="0" value="0" />
+      <div id="controls_container">
+        <div id="controls_background"></div>
+        <div id="controls">
+          <button id="playbutton">Play</button>
+          <input id="timeslider" type="range" min="0" max="0" value="0" />
+        </div>
+        <div id="controls_placeholder">Brought to you by Inclined Games</div>
       </div>
     </div>
     <div id="right">
-      <div id="time">0.00</div>
-      <div id="player_tile_container" class="nav">
-        <span class="title">Players</span>
-        <div id="player_tiles"></div>
+      <div id="background_right"></div>
+      <div id="game_right">
+        <div id="time">0.00</div>
+        <div id="player_tile_container" class="nav">
+          <span class="title">Players</span>
+          <div id="player_tiles"></div>
+        </div>
+        <div id="turn_tile_container" class="nav">
+          <span class="title">Turns</span>
+          <div id="turn_tiles"></div>
+        </div>
+        <button id="back_to_menu">Return to Menu</button>
       </div>
-      <div id="turn_tile_container" class="nav">
-        <span class="title">Turns</span>
-        <div id="turn_tiles"></div>
+      <div id="instructions_right">
+        <span class="title">How to play</span>
+        <div class="instructions_section">
+          <span>Click a boat!</span>
+        </div>
       </div>
     </div>
   </div>

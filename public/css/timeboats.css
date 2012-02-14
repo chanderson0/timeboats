@@ -2,12 +2,12 @@ html, body {
   background: url('../img/sand.png') top left repeat;
   text-align: center;
   font-family: Verdana, sans-serif;
-  width: 1054px;
+  width: 900px;
   height: 627px;
 }
 
 #container {
-  width: 1024px;
+  width: 870px;
   margin: 15px auto;
   text-align: left;
 }
@@ -164,13 +164,45 @@ canvas {
   z-index: 1000;
 }
 
-#controls { 
+#controls_container { 
   position: absolute;
   top: 567px;
   height: 30px;
+  width: 720px;
+}
+
+#controls {
+  position: absolute;
+  top:0;
+  left: 0;
   line-height: 30px;
+  height: 30px;
   vertical-align: middle;
   display: none;
+}
+
+#controls_background {
+  position:absolute;
+  top:0;
+  left:0;
+  height: 30px;
+  width: 100%;
+  background-color:#2b3c4c;
+}
+
+#controls_placeholder {
+  font-family: Verdana, sans-serif;
+  position:absolute;
+  top:0;
+  left:0;
+  height: 30px;
+  line-height: 30px;
+  width: 100%;
+  vertical-align: middle;
+  display: none;
+  background-color:#2b3c4c;
+  text-align: center;
+  color: #fff;
 }
 
 #left #playbutton {
@@ -220,11 +252,34 @@ canvas {
 
 #right {
   float: left;
-  width: 295px;
+  width: 143px;
   height: 597px;
   position: relative;
-  margin-left: 9px;
+  margin-left: 7px;
   font-family: Verdana, sans-serif;
+}
+
+#background_right {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color:#2b3c4c;
+}
+
+#game_right {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: none;
+}
+
+#instructions_right {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color:#2b3c4c;
+  color: #fff;
+  display: none;
 }
 
 #time {
@@ -260,7 +315,7 @@ canvas {
 
 #player_tiles .player {
   height: 20px;
-  width: 285px;
+  width: 133px;
   padding: 5px;
   background: #999999;
   line-height: 20px;
@@ -286,7 +341,7 @@ canvas {
 #turn_tiles .turn {
   cursor: pointer;
   height: 20px;
-  width: 285px;
+  width: 133px;
   background: #999999;
   padding: 5px;
   line-height: 20px;
@@ -311,7 +366,23 @@ canvas {
   font-style: italic;
 }
 
+#back_to_menu {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: block;
+  width: 143px;
+  height: 30px;
+  color: #fff;
+  font-size: 15px;
+  background-color:#2b3c4c;
+  border-style:none;
+  cursor: pointer;
+}
 
+#back_to_menu:hover {
+  background-color: #777;
+}
 
 
 

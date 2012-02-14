@@ -6,6 +6,17 @@ API = require('./api.coffee')
 UUID = require('./lib/uuid.js')
 async = require('./lib/async.js')
 
+# globals controlling rendering
+loaded = false
+render = false
+render_menu = true
+
+# globals for canvases
+menu_canvas = null
+menu_context = null
+game_canvas = null
+game_context = null
+
 # Helper function.
 timestamp = ->
   +new Date()
@@ -20,25 +31,22 @@ drawGames = (game_ids, games, api) ->
     id = $(e.target).attr('data')
     window.gameClicked id
 
-loaded = ->
-  menu_canvas = $('#menu-canvas')[0]
-  menu_context = menu_canvas.getContext '2d'
-
-  game_canvas = $('#game-canvas')[0]
-  game_context = game_canvas.getContext '2d'
+load = ->
+  loaded = true
 
   api = new API.LocalAPI 'chris', null
 
-  menu_boats = new MenuBoats menu_canvas, menu_context, menu_canvas.width, menu_canvas.height, window.document
-  render_menu = true
-  $("#menu-canvas").fadeIn()
-  $("#menu").fadeIn()
   if pokki?
-    pokki.setPopupClientSize 1054, 627
+    pokki.setPopupClientSize 900, 627
 
+  menu_boats = new MenuBoats menu_canvas, menu_context, menu_canvas.width, menu_canvas.height, window.document
+  $("#menu-canvas").fadeIn 1000, ->
+    $("#menu").fadeIn 1000
+    $("#controls_placeholder").fadeIn 1000
+    $("#instructions_right").fadeIn 1000
+  
   game = null
   timeboats = null
-  render = false
 
   $('#newgame').click =>
     render = false
@@ -57,6 +65,8 @@ loaded = ->
     render_menu = false
 
     $("#menu-canvas").fadeOut 1000
+    $("#controls_placeholder").fadeOut 1000
+    $("#instructions_right").fadeOut 1000
     $("#menu").fadeOut 1000, =>
       # if pokki?
       #   pokki.setPopupClientSize 1054, 627
@@ -64,8 +74,11 @@ loaded = ->
       render = true
       render_menu = false
       $("#buttons").hide()
+      $("#controls_background").fadeOut 1000
       $("#controls").fadeIn 1000
       $("#game-canvas").fadeIn 1000
+      $("#game_right").fadeIn 1000
+      $("#background_right").fadeOut 1000
 
   $('#loadgame').click =>
     $("#buttons button").prop "disabled", true
@@ -101,22 +114,32 @@ loaded = ->
       timeboats.turnClicked null
 
       $("#menu-canvas").fadeOut 1000
+      $("#controls_placeholder").fadeOut 1000
+      $("#instructions_right").fadeOut 1000
       $("#menu").fadeOut 1000, =>
         render = true
         render_menu = false
         $("#load").hide()
         $("#controls").fadeIn 1000
+        $("#controls_background").fadeOut 1000
         $("#game-canvas").fadeIn 1000
+        $("#game_right").fadeIn 1000
+        $("#background_right").fadeOut 1000
 
   window.gameOver = (game) =>
     $("#controls").fadeOut 1000
+    $("#controls_background").fadeIn 1000
+    $("#game_right").fadeOut 1000
+    $("#background_right").fadeIn 1000
     render_menu = true
     render = false
     menu_boats.full_redraw = true
     $("#game-canvas").fadeOut 1000, =>
       timeboats = null
       $("#menu-canvas").fadeIn 1000
+      $("#instructions_right").fadeIn 1000
       $("#menu").fadeIn 1000
+      $("#controls_placeholder").fadeIn 1000
       $("#gameover").show()
 
    $('#gameover .back').click =>
@@ -125,6 +148,23 @@ loaded = ->
     #     pokki.setPopupClientSize 750, 590
     $("#gameover").fadeOut 1000, ->
       $("#buttons").fadeIn 1000
+
+  $("#back_to_menu").click =>
+    $("#controls").fadeOut 1000
+    $("#controls_background").fadeIn 1000
+    $("#game_right").fadeOut 1000
+    $("#background_right").fadeIn 1000
+    render_menu = true
+    render = false
+    menu_boats.full_redraw = true
+    $("#game-canvas").fadeOut 1000, =>
+      timeboats = null
+      $("#menu-canvas").fadeIn 1000
+      $("#instructions_right").fadeIn 1000
+      $("#menu").fadeIn 1000
+      $("#buttons").fadeIn 1000
+      $("#controls_placeholder").fadeIn 1000
+      $("#buttons button").prop "disabled", false
 
   $("#playbutton").click =>
     return if not timeboats?
@@ -188,22 +228,47 @@ loaded = ->
       render_ctx.fillText("" + Math.floor(1/dt), 10, 10)
 
     last = now
-    requestAnimationFrame frame
+
+    if loaded
+      requestAnimationFrame frame
 
   frame()
 
+unload = ->
+  loaded = false
+  menu_context.clearRect 0, 0, menu_canvas.width, menu_canvas.height
+  game_context.clearRect 0, 0, game_canvas.width, game_canvas.height
+
 # Setup.
 if pokki?
-  pokki.addEventListener 'popup_showing', ->
-    console.log 'is showing'
+  pokki.addEventListener 'popup_unload', -> 
+    unload()
 
-  pokki.addEventListener 'popup_shown', -> 
-    console.log "The popup is now shown!"
-    loaded()
+  old_render = false
+  old_render_menu = false
 
-  pokki.addEventListener 'popup_hidden', ->
-    console.log "The popup was closed."
-else
-  window.onload = ->
-    loaded()
+  pokki.addEventListener 'popup_shown', ->
+    if old_render
+      render = true
+    if old_render_menu
+      render_menu = true
+
+  pokki.addEventListener 'popup_hiding', ->
+    old_render = render
+    old_render_menu = render_menu
+    render = false
+    render_menu = false
+
+  # pokki.addEventListener 'popup_hidden', ->
+  #   old_render = render
+  #   old_render_menu = render_menu
+  #   render = false
+  #   render_menu = false
+
+window.onload = ->
+  menu_canvas = $('#menu-canvas')[0]
+  menu_context = menu_canvas.getContext '2d'
+  game_canvas = $('#game-canvas')[0]
+  game_context = game_canvas.getContext '2d'
+  load()
 

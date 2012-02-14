@@ -306,7 +306,8 @@ exports.Timeboats = class Timeboats
     $('#time').html time.toFixed 2
 
   draw: ->
-    Map.getInstance().draw @map_context
+    Map.getInstance().draw @map_context, full_redraw: @full_redraw
+    @full_redraw = false
 
     @game_context.clearRect 0, 0, @width, @height
     Map.getInstance().drawNonTerrain @game_context
