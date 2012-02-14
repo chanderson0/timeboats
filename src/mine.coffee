@@ -2,6 +2,7 @@ GameObject2D = require('./game_object_2d.coffee').GameObject2D
 AssetLoader = require('./asset_loader.coffee').AssetLoader
 Point = require('./point.coffee').Point
 Random = require('./random.coffee').Random
+Goldsplosion = require('./goldsplosion.coffee').Goldsplosion
 
 exports.Mine = class Mine extends GameObject2D
   __type: 'Mine'
@@ -33,6 +34,7 @@ exports.Mine = class Mine extends GameObject2D
           object.explode state
         else
           state.addScore object.id, 1, 'gold'
+          state.addObject("goldsplosion#{@id}", new Goldsplosion("goldsplosion#{@id}", @x + 24, @y + 6))
         state.removeObject @id
 
         # Detect end game
@@ -41,7 +43,7 @@ exports.Mine = class Mine extends GameObject2D
           if object.__type == 'Mine'
             gold++
             break
-        
+
         if gold == 0
           state.gameover = true
 
