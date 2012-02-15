@@ -2030,6 +2030,7 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
       Mine.__super__.constructor.call(this, this.id, this.x, this.y);
       this.frame = 0;
       this.dt = new Random(this.x + this.y).nextf();
+      this.dtTotal = this.dt;
       this.radius = 15;
       this.isGold = false;
     }
@@ -2039,13 +2040,16 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
       c = new Mine(this.id, this.x, this.y);
       c.frame = this.frame;
       c.dt = this.dt;
+      c.dtTotal = this.dtTotal;
       c.isGold = this.isGold;
+      c.vx = this.vx;
       return c;
     };
 
     Mine.prototype.update = function(dt, state) {
-      var gold, id, object, _ref, _ref2;
+      var gold, id, object, rand, _ref, _ref2;
       this.dt += dt;
+      this.dtTotal += dt;
       if (this.dt >= 0.4) {
         this.dt = 0;
         this.frame++;
@@ -2075,6 +2079,9 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
           break;
         }
       }
+      rand = new Random(Math.floor(this.x + this.y + this.dtTotal * 10000));
+      if (rand.nextf() < 0.15) this.vx += -7.0 + rand.nextf() * 14.0;
+      this.vx *= 0.999;
       return Mine.__super__.update.call(this, dt);
     };
 

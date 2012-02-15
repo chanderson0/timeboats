@@ -11,6 +11,7 @@ exports.Mine = class Mine extends GameObject2D
     super @id, @x, @y
     @frame = 0
     @dt = new Random(@x + @y).nextf()
+    @dtTotal = @dt
     @radius = 15
     @isGold = false
 
@@ -18,11 +19,14 @@ exports.Mine = class Mine extends GameObject2D
     c = new Mine(@id, @x, @y)
     c.frame = @frame
     c.dt = @dt
+    c.dtTotal = @dtTotal
     c.isGold = @isGold
+    c.vx = @vx
     return c
 
   update: (dt, state) ->
     @dt += dt
+    @dtTotal += dt
     if @dt >= 0.4
       @dt = 0
       @frame++
@@ -48,6 +52,11 @@ exports.Mine = class Mine extends GameObject2D
           state.gameover = true
 
         break
+
+    rand = new Random(Math.floor(@x + @y + @dtTotal * 10000))
+    if rand.nextf() < 0.15
+      @vx += -7.0 + rand.nextf() * 14.0
+    @vx *= 0.999
 
     super dt
 
