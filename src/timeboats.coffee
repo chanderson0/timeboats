@@ -82,7 +82,7 @@ exports.Timeboats = class Timeboats
 
       gamePlayer = @game.currentPlayer()
       startDock = Map.getInstance().docks[gamePlayer.id]
-      player = new Square(@game.next_turn_id, startDock.x, startDock.y, 32, gamePlayer.color)
+      player = new Square(@game.next_turn_id, startDock.x, startDock.y, 32, gamePlayer.color, gamePlayer.id)
       command = new Command.JoinCommand player.id, player
       @addCommand @command_history, command
       @addCommand @active_commands, command
@@ -198,7 +198,7 @@ exports.Timeboats = class Timeboats
       $("#playbutton").prop "disabled", true
       $("#timeslider").prop "disabled", true
 
-      window.gameOver @game      
+      window.gameOver @game
     else
       console.log "couldn't switch state"
 
@@ -264,7 +264,7 @@ exports.Timeboats = class Timeboats
       if @frame_num > 0
         player_count = 0
         command_count = next_state.commands.length
-        
+
         if command_count > 0
           @frames_no_commands = 0
         else
@@ -300,7 +300,7 @@ exports.Timeboats = class Timeboats
       context.textAlign = 'center'
       context.fillText 'No movement warning!', @width / 2, 30
       context.restore()
-    
+
     time = @frame_history[@frame_num].time
     time = 0 if not time?
     $('#time').html time.toFixed 2
@@ -312,7 +312,7 @@ exports.Timeboats = class Timeboats
     @game_context.clearRect 0, 0, @width, @height
     Map.getInstance().drawNonTerrain @game_context
     @frame_history[@frame_num].draw @game_context, active: @game.next_turn_id
-    
+
     @drawHUD @game_context
 
     @context.drawImage @map_canvas, 0, 0
@@ -323,12 +323,12 @@ exports.Timeboats = class Timeboats
       command = new Command.ExplodeCommand @game.next_turn_id
       @addCommand @command_history, command
       @addCommand @active_commands, command
-    else if @gamestate == "ready" 
+    else if @gamestate == "ready"
       gamePlayer = @game.currentPlayer()
       startDock = Map.getInstance().docks[gamePlayer.id]
       if startDock.containsPoint e.offsetX, e.offsetY
         @updateState @gamestate, "recording"
-    else if @gamestate == "paused" 
+    else if @gamestate == "paused"
       gamePlayer = @game.currentPlayer()
       startDock = Map.getInstance().docks[gamePlayer.id]
       if startDock.containsPoint e.offsetX, e.offsetY

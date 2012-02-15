@@ -438,7 +438,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.placeholder = null;
         gamePlayer = this.game.currentPlayer();
         startDock = Map.getInstance().docks[gamePlayer.id];
-        player = new Square(this.game.next_turn_id, startDock.x, startDock.y, 32, gamePlayer.color);
+        player = new Square(this.game.next_turn_id, startDock.x, startDock.y, 32, gamePlayer.color, gamePlayer.id);
         command = new Command.JoinCommand(player.id, player);
         this.addCommand(this.command_history, command);
         this.addCommand(this.active_commands, command);
@@ -2213,12 +2213,13 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 
     Square.prototype.__type = 'Square';
 
-    function Square(id, x, y, size, color) {
+    function Square(id, x, y, size, color, playerId) {
       this.id = id;
       this.x = x;
       this.y = y;
       this.size = size;
       this.color = color != null ? color : 0;
+      this.playerId = playerId != null ? playerId : 0;
       Square.__super__.constructor.call(this, this.id, this.x, this.y, 0, 0, -1.57);
       this.destx = this.x;
       this.desty = this.y;
@@ -2235,6 +2236,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       sq.destx = this.destx;
       sq.desty = this.desty;
       sq.invincibleTime = this.invincibleTime;
+      sq.playerId = this.playerId;
       return sq;
     };
 
@@ -2260,7 +2262,12 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       var dir, dist, to_move;
       dir = Point.subtract(this.destx, this.desty, this.x, this.y);
       dist = Point.getLength(dir.x, dir.y);
-      if (this.invincibleTime > 0) this.invincibleTime -= 0.7 * dt;
+      if (this.invincibleTime > 0) {
+        this.invincibleTime -= 0.7 * dt;
+        if (Point.getDistance(this.x, this.y, Map.getInstance().docks[this.playerId].x, Map.getInstance().docks[this.playerId].y) > 60) {
+          this.invincibleTime = 0;
+        }
+      }
       to_move = Point.normalize(dir.x, dir.y, Math.sqrt(dist) * dt * 5000);
       if (dist < 0.5) {
         to_move = {
