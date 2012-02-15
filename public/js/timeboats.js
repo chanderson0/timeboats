@@ -1661,7 +1661,7 @@ require.define("/point.coffee", function (require, module, exports, __dirname, _
 
 require.define("/checkpoint.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var AssetLoader, Checkpoint, GameObject2D, Point;
+  var AssetLoader, Checkpoint, GameObject2D, Goldsplosion, Point;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject2D = require('./game_object_2d.coffee').GameObject2D;
@@ -1669,6 +1669,8 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
   AssetLoader = require('./asset_loader.coffee').AssetLoader;
 
   Point = require('./point.coffee').Point;
+
+  Goldsplosion = require('./goldsplosion.coffee').Goldsplosion;
 
   exports.Checkpoint = Checkpoint = (function() {
 
@@ -1714,26 +1716,29 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
           state.addScore(object.id, 1, 'checkpoint');
           object.explode(state);
           this.checked = true;
-          break;
-        }
-      }
-      allChecked = false;
-      if (this.checked) {
-        allChecked = true;
-        _ref2 = state.objects;
-        for (id in _ref2) {
-          object = _ref2[id];
-          if (object.__type === 'Checkpoint' && !object.checked) {
-            allChecked = false;
-            break;
+          allChecked = false;
+          if (this.checked) {
+            allChecked = true;
+            _ref2 = state.objects;
+            for (id in _ref2) {
+              object = _ref2[id];
+              if (object.__type === 'Checkpoint' && !object.checked) {
+                allChecked = false;
+                break;
+              }
+            }
           }
-        }
-      }
-      if (allChecked) {
-        _ref3 = state.objects;
-        for (id in _ref3) {
-          object = _ref3[id];
-          if (object.__type === 'Mine') object.isGold = true;
+          if (allChecked) {
+            _ref3 = state.objects;
+            for (id in _ref3) {
+              object = _ref3[id];
+              if (object.__type === 'Mine' && !object.isGold) {
+                object.isGold = true;
+                state.addObject("goldsplosion_check" + object.id, new Goldsplosion("goldsplosion_check" + object.id, object.x + 24, object.y + 6));
+              }
+            }
+          }
+          break;
         }
       }
       return Checkpoint.__super__.update.call(this, dt);
@@ -1926,6 +1931,87 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
 
 });
 
+require.define("/goldsplosion.coffee", function (require, module, exports, __dirname, __filename) {
+    (function() {
+  var AssetLoader, GameObject2D, Goldsplosion, Random;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
+
+  Random = require('./random.coffee').Random;
+
+  AssetLoader = require('./asset_loader.coffee').AssetLoader;
+
+  exports.Goldsplosion = Goldsplosion = (function() {
+
+    __extends(Goldsplosion, GameObject2D);
+
+    Goldsplosion.prototype.__type = 'Goldsplosion';
+
+    function Goldsplosion(id, x, y) {
+      this.id = id;
+      this.x = x;
+      this.y = y;
+      Goldsplosion.__super__.constructor.call(this, this.id, this.x, this.y);
+      this.lifespan = this.ttl = 0.4;
+      this.seed = this.x + this.y + 42;
+    }
+
+    Goldsplosion.prototype.clone = function() {
+      var exp;
+      exp = new Goldsplosion(this.id, this.x, this.y);
+      exp.lifespan = this.lifespan;
+      exp.ttl = this.ttl;
+      return exp;
+    };
+
+    Goldsplosion.prototype.update = function(dt, state) {
+      this.ttl -= dt;
+      Goldsplosion.__super__.update.call(this, dt, state);
+      if (this.ttl <= 0) return state.removeObject(this.id);
+    };
+
+    Goldsplosion.prototype.draw = function(context) {
+      var goldPositions, goldTypes, goldVelocity, halfsize, i, j, numGolds, random, size, _ref, _ref2, _ref3;
+      context.save();
+      random = new Random(this.seed);
+      goldPositions = [];
+      goldTypes = [];
+      numGolds = 10;
+      for (i = 0, _ref = numGolds - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+        goldPositions.push([-3.0 + random.nextf() * 6.0, -3.0 + random.nextf() * 6.0]);
+        goldVelocity = [-4.0 + random.nextf() * 8.0, -4.0 + random.nextf() * 8.0];
+        goldTypes.push(Math.floor(random.next() % 2));
+        for (j = 0, _ref2 = (this.lifespan - this.ttl) * 60 * this.lifespan; 0 <= _ref2 ? j <= _ref2 : j >= _ref2; 0 <= _ref2 ? j++ : j--) {
+          goldPositions[i][0] += goldVelocity[0];
+          goldPositions[i][1] += goldVelocity[1];
+        }
+      }
+      context.translate(this.x, this.y);
+      context.globalAlpha = 0.85 * (this.ttl / this.lifespan);
+      console.log(goldTypes[0], goldTypes[1], goldTypes[2], goldTypes[3], goldTypes[4], goldTypes[5], goldTypes[6], goldTypes[7], goldTypes[8], goldTypes[9]);
+      for (i = 0, _ref3 = numGolds - 1; 0 <= _ref3 ? i <= _ref3 : i >= _ref3; 0 <= _ref3 ? i++ : i--) {
+        size = halfsize = 0;
+        if (goldTypes[i] === 0) {
+          size = 15;
+          halfsize = 7;
+        } else {
+          size = 7;
+          halfsize = 3;
+        }
+        context.drawImage(AssetLoader.getInstance().getAsset("sparkle" + goldTypes[i]), goldPositions[i][0] - halfsize, goldPositions[i][1] - halfsize, size, size);
+      }
+      return context.restore();
+    };
+
+    return Goldsplosion;
+
+  })();
+
+}).call(this);
+
+});
+
 require.define("/dock.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
   var AssetLoader, Dock, GameObject2D;
@@ -2094,87 +2180,6 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
     };
 
     return Mine;
-
-  })();
-
-}).call(this);
-
-});
-
-require.define("/goldsplosion.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var AssetLoader, GameObject2D, Goldsplosion, Random;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
-
-  Random = require('./random.coffee').Random;
-
-  AssetLoader = require('./asset_loader.coffee').AssetLoader;
-
-  exports.Goldsplosion = Goldsplosion = (function() {
-
-    __extends(Goldsplosion, GameObject2D);
-
-    Goldsplosion.prototype.__type = 'Goldsplosion';
-
-    function Goldsplosion(id, x, y) {
-      this.id = id;
-      this.x = x;
-      this.y = y;
-      Goldsplosion.__super__.constructor.call(this, this.id, this.x, this.y);
-      this.lifespan = this.ttl = 0.4;
-      this.seed = this.x + this.y + 42;
-    }
-
-    Goldsplosion.prototype.clone = function() {
-      var exp;
-      exp = new Goldsplosion(this.id, this.x, this.y);
-      exp.lifespan = this.lifespan;
-      exp.ttl = this.ttl;
-      return exp;
-    };
-
-    Goldsplosion.prototype.update = function(dt, state) {
-      this.ttl -= dt;
-      Goldsplosion.__super__.update.call(this, dt, state);
-      if (this.ttl <= 0) return state.removeObject(this.id);
-    };
-
-    Goldsplosion.prototype.draw = function(context) {
-      var goldPositions, goldTypes, goldVelocity, halfsize, i, j, numGolds, random, size, _ref, _ref2, _ref3;
-      context.save();
-      random = new Random(this.seed);
-      goldPositions = [];
-      goldTypes = [];
-      numGolds = 10;
-      for (i = 0, _ref = numGolds - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
-        goldPositions.push([-3.0 + random.nextf() * 6.0, -3.0 + random.nextf() * 6.0]);
-        goldVelocity = [-4.0 + random.nextf() * 8.0, -4.0 + random.nextf() * 8.0];
-        goldTypes.push(Math.floor(random.next() % 2));
-        for (j = 0, _ref2 = (this.lifespan - this.ttl) * 60 * this.lifespan; 0 <= _ref2 ? j <= _ref2 : j >= _ref2; 0 <= _ref2 ? j++ : j--) {
-          goldPositions[i][0] += goldVelocity[0];
-          goldPositions[i][1] += goldVelocity[1];
-        }
-      }
-      context.translate(this.x, this.y);
-      context.globalAlpha = 0.85 * (this.ttl / this.lifespan);
-      console.log(goldTypes[0], goldTypes[1], goldTypes[2], goldTypes[3], goldTypes[4], goldTypes[5], goldTypes[6], goldTypes[7], goldTypes[8], goldTypes[9]);
-      for (i = 0, _ref3 = numGolds - 1; 0 <= _ref3 ? i <= _ref3 : i >= _ref3; 0 <= _ref3 ? i++ : i--) {
-        size = halfsize = 0;
-        if (goldTypes[i] === 0) {
-          size = 15;
-          halfsize = 7;
-        } else {
-          size = 7;
-          halfsize = 3;
-        }
-        context.drawImage(AssetLoader.getInstance().getAsset("sparkle" + goldTypes[i]), goldPositions[i][0] - halfsize, goldPositions[i][1] - halfsize, size, size);
-      }
-      return context.restore();
-    };
-
-    return Goldsplosion;
 
   })();
 

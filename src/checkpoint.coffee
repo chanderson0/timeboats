@@ -1,6 +1,7 @@
 GameObject2D = require('./game_object_2d.coffee').GameObject2D
 AssetLoader = require('./asset_loader.coffee').AssetLoader
 Point = require('./point.coffee').Point
+Goldsplosion = require('./goldsplosion.coffee').Goldsplosion
 
 exports.Checkpoint = class Checkpoint extends GameObject2D
   __type: 'Checkpoint'
@@ -35,21 +36,22 @@ exports.Checkpoint = class Checkpoint extends GameObject2D
         state.addScore object.id, 1, 'checkpoint'
         object.explode state
         @checked = true
+
+        allChecked = false
+        if @checked
+          allChecked = true
+          for id, object of state.objects
+            if object.__type == 'Checkpoint' and not object.checked
+              allChecked = false
+              break
+
+        # TURN THEM INTO GOooOOOLlddd!
+        if allChecked
+          for id, object of state.objects
+            if object.__type == 'Mine' and not object.isGold
+              object.isGold = true
+              state.addObject("goldsplosion_check#{object.id}", new Goldsplosion("goldsplosion_check#{object.id}", object.x + 24, object.y + 6))
         break
-
-    allChecked = false
-    if @checked
-      allChecked = true
-      for id, object of state.objects
-        if object.__type == 'Checkpoint' and not object.checked
-          allChecked = false
-          break
-
-    # TURN THEM INTO GOooOOOLlddd!
-    if allChecked
-      for id, object of state.objects
-        if object.__type == 'Mine'
-          object.isGold = true
 
     super dt
 
