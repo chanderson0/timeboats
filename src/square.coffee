@@ -29,8 +29,9 @@ exports.Square = class Square extends GameObject2D
     if @invincibleTime > 0
       return
     id = Math.floor(Math.random() * 1000000)
-    explosion = new Explosion id, @x, @y, 90
+    explosion = new Explosion id, @x, @y, 80
     state.addObject id, explosion
+    Map.getInstance().collideWith(explosion, state, true);
     state.removeObject @id
     state.addScore @id, 1, 'boat'
 

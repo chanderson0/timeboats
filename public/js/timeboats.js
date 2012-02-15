@@ -1009,7 +1009,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
                 r = Math.floor(b * 0.9);
                 g = r;
                 if (this.cells[x][y].altitude < this.waterLevel) {
-                  alpha = 0.5 + this.cells[x][y].excitement * 0.2;
+                  alpha = 0.45 + this.cells[x][y].excitement * 0.3;
                   landAlpha = 1 / (1 + alpha);
                   waterAlpha = alpha / (1 + alpha);
                   r = Math.floor(r * landAlpha + 60.0 * waterAlpha);
@@ -1128,7 +1128,9 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
             _results2 = [];
             for (y = yStart; yStart <= yFinish ? y <= yFinish : y >= yFinish; yStart <= yFinish ? y++ : y--) {
               if (y < 0 || y >= this.height) continue;
-              if (disturb) this.cells[x][y].excitement = 0.7;
+              if (disturb && Point.getDistance(obj.x, obj.y, x * Map.CELL_SIZE_PX, y * Map.CELL_SIZE_PX) <= obj.radius) {
+                this.cells[x][y].excitement = 0.7;
+              }
               if (this.cells[x][y].altitude >= this.waterLevel) {
                 if (!collided) {
                   obj.collide(state);
@@ -1229,7 +1231,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
             _results2 = [];
             for (yG = _ref3 = y - radius, _ref4 = y + radius; _ref3 <= _ref4 ? yG <= _ref4 : yG >= _ref4; _ref3 <= _ref4 ? yG++ : yG--) {
               if (xG >= 0 && xG < this.width && yG >= 0 && yG < this.height) {
-                this.cells[xG][yG].altitude -= g.get2d(xG - x, yG - y) * 8.0;
+                this.cells[xG][yG].altitude -= g.get2d(xG - x, yG - y) * 12.0;
                 if (this.cells[xG][yG].altitude < 0) {
                   this.cells[xG][yG].altitude = 0;
                 }
@@ -2240,8 +2242,9 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
       var explosion, id;
       if (this.invincibleTime > 0) return;
       id = Math.floor(Math.random() * 1000000);
-      explosion = new Explosion(id, this.x, this.y, 90);
+      explosion = new Explosion(id, this.x, this.y, 80);
       state.addObject(id, explosion);
+      Map.getInstance().collideWith(explosion, state, true);
       state.removeObject(this.id);
       return state.addScore(this.id, 1, 'boat');
     };

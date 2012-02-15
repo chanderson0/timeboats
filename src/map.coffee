@@ -59,7 +59,7 @@ exports.Map = class Map extends GameObject
             r = Math.floor(b * 0.9)
             g = r
             if @cells[x][y].altitude < @waterLevel
-              alpha = 0.5 + @cells[x][y].excitement * 0.2
+              alpha = 0.45 + @cells[x][y].excitement * 0.3
               landAlpha = 1 / (1 + alpha)
               waterAlpha = alpha / (1 + alpha)
               r = Math.floor(r * landAlpha + 60.0 * waterAlpha)
@@ -140,10 +140,10 @@ exports.Map = class Map extends GameObject
 
   collideWith: (obj, state, disturb = false) ->
     if @isInitialized
-      xStart = @.getCellAt(obj.x - obj.radius)
-      yStart = @.getCellAt(obj.y - obj.radius)
-      xFinish = @.getCellAt(obj.x + obj.radius)
-      yFinish = @.getCellAt(obj.y + obj.radius)
+      xStart = @getCellAt(obj.x - obj.radius)
+      yStart = @getCellAt(obj.y - obj.radius)
+      xFinish = @getCellAt(obj.x + obj.radius)
+      yFinish = @getCellAt(obj.y + obj.radius)
 
       collided = false
       for x in [xStart..xFinish]
@@ -152,7 +152,7 @@ exports.Map = class Map extends GameObject
         for y in [yStart..yFinish]
           if y < 0 or y >= @height
             continue
-          if disturb
+          if disturb && Point.getDistance(obj.x, obj.y, x * Map.CELL_SIZE_PX, y * Map.CELL_SIZE_PX) <= obj.radius
             @cells[x][y].excitement = 0.7
           if @cells[x][y].altitude >= @waterLevel # collision with terrain
             if not collided
@@ -209,7 +209,7 @@ exports.Map = class Map extends GameObject
       for xG in [x - radius..x + radius]
         for yG in [y - radius..y + radius]
             if xG >= 0 and xG < @width and yG >= 0 and yG < @height
-              @cells[xG][yG].altitude -= g.get2d(xG - x, yG - y) * 8.0
+              @cells[xG][yG].altitude -= g.get2d(xG - x, yG - y) * 12.0
               if @cells[xG][yG].altitude < 0
                 @cells[xG][yG].altitude = 0
               if @cells[xG][yG].altitude < @waterLevel
