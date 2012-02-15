@@ -645,7 +645,10 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.draw = function() {
-      Map.getInstance().draw(this.map_context);
+      Map.getInstance().draw(this.map_context, {
+        full_redraw: this.full_redraw
+      });
+      this.full_redraw = false;
       this.game_context.clearRect(0, 0, this.width, this.height);
       Map.getInstance().drawNonTerrain(this.game_context);
       this.frame_history[this.frame_num].draw(this.game_context, {
@@ -3729,7 +3732,7 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
 
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var API, MenuBoats, Timeboats, Turns, UUID, async, drawGames, timestamp;
+  var API, MenuBoats, Timeboats, Turns, UUID, async, drawGames, game_canvas, game_context, load, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
 
   Timeboats = require('./timeboats.coffee').Timeboats;
 
@@ -3742,6 +3745,20 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
   UUID = require('./lib/uuid.js');
 
   async = require('./lib/async.js');
+
+  loaded = false;
+
+  render = false;
+
+  render_menu = true;
+
+  menu_canvas = null;
+
+  menu_context = null;
+
+  game_canvas = null;
+
+  game_context = null;
 
   timestamp = function() {
     return +new Date();
@@ -3764,21 +3781,22 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     });
   };
 
-  window.onload = function() {
-    var api, dt, frame, frame_num, game, game_canvas, game_context, gdt, last, menu_boats, menu_canvas, menu_context, rdt, render, render_menu, timeboats;
+  load = function() {
+    var api, dt, frame, frame_num, game, gdt, last, menu_boats, rdt, timeboats;
     var _this = this;
-    menu_canvas = $('#menu-canvas')[0];
-    menu_context = menu_canvas.getContext('2d');
-    game_canvas = $('#game-canvas')[0];
-    game_context = game_canvas.getContext('2d');
+    loaded = true;
     api = new API.LocalAPI('chris', null);
+    if (typeof pokki !== "undefined" && pokki !== null) {
+      pokki.setPopupClientSize(900, 627);
+    }
     menu_boats = new MenuBoats(menu_canvas, menu_context, menu_canvas.width, menu_canvas.height, window.document);
-    render_menu = true;
-    $("#menu-canvas").fadeIn();
-    $("#menu").fadeIn();
+    $("#menu-canvas").fadeIn(1000, function() {
+      $("#menu").fadeIn(1000);
+      $("#controls_placeholder").fadeIn(1000);
+      return $("#instructions_right").fadeIn(1000);
+    });
     game = null;
     timeboats = null;
-    render = false;
     $('#newgame').click(function() {
       var order, player1, player2, players;
       render = false;
@@ -3796,12 +3814,17 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       render = true;
       render_menu = false;
       $("#menu-canvas").fadeOut(1000);
+      $("#controls_placeholder").fadeOut(1000);
+      $("#instructions_right").fadeOut(1000);
       return $("#menu").fadeOut(1000, function() {
         render = true;
         render_menu = false;
         $("#buttons").hide();
+        $("#controls_background").fadeOut(1000);
         $("#controls").fadeIn(1000);
-        return $("#game-canvas").fadeIn(1000);
+        $("#game-canvas").fadeIn(1000);
+        $("#game_right").fadeIn(1000);
+        return $("#background_right").fadeOut(1000);
       });
     });
     $('#loadgame').click(function() {
@@ -3836,24 +3859,34 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         timeboats = new Timeboats(game, game_context, game_canvas.width, game_canvas.height, api, window.document);
         timeboats.turnClicked(null);
         $("#menu-canvas").fadeOut(1000);
+        $("#controls_placeholder").fadeOut(1000);
+        $("#instructions_right").fadeOut(1000);
         return $("#menu").fadeOut(1000, function() {
           render = true;
           render_menu = false;
           $("#load").hide();
           $("#controls").fadeIn(1000);
-          return $("#game-canvas").fadeIn(1000);
+          $("#controls_background").fadeOut(1000);
+          $("#game-canvas").fadeIn(1000);
+          $("#game_right").fadeIn(1000);
+          return $("#background_right").fadeOut(1000);
         });
       });
     };
     window.gameOver = function(game) {
       $("#controls").fadeOut(1000);
+      $("#controls_background").fadeIn(1000);
+      $("#game_right").fadeOut(1000);
+      $("#background_right").fadeIn(1000);
       render_menu = true;
       render = false;
       menu_boats.full_redraw = true;
       return $("#game-canvas").fadeOut(1000, function() {
         timeboats = null;
         $("#menu-canvas").fadeIn(1000);
+        $("#instructions_right").fadeIn(1000);
         $("#menu").fadeIn(1000);
+        $("#controls_placeholder").fadeIn(1000);
         return $("#gameover").show();
       });
     };
@@ -3861,6 +3894,24 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       $("#buttons button").prop("disabled", false);
       return $("#gameover").fadeOut(1000, function() {
         return $("#buttons").fadeIn(1000);
+      });
+    });
+    $("#back_to_menu").click(function() {
+      $("#controls").fadeOut(1000);
+      $("#controls_background").fadeIn(1000);
+      $("#game_right").fadeOut(1000);
+      $("#background_right").fadeIn(1000);
+      render_menu = true;
+      render = false;
+      menu_boats.full_redraw = true;
+      return $("#game-canvas").fadeOut(1000, function() {
+        timeboats = null;
+        $("#menu-canvas").fadeIn(1000);
+        $("#instructions_right").fadeIn(1000);
+        $("#menu").fadeIn(1000);
+        $("#buttons").fadeIn(1000);
+        $("#controls_placeholder").fadeIn(1000);
+        return $("#buttons button").prop("disabled", false);
       });
     });
     $("#playbutton").click(function() {
@@ -3922,9 +3973,41 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         render_ctx.fillText("" + Math.floor(1 / dt), 10, 10);
       }
       last = now;
-      return requestAnimationFrame(frame);
+      if (loaded) return requestAnimationFrame(frame);
     };
     return frame();
+  };
+
+  unload = function() {
+    loaded = false;
+    menu_context.clearRect(0, 0, menu_canvas.width, menu_canvas.height);
+    return game_context.clearRect(0, 0, game_canvas.width, game_canvas.height);
+  };
+
+  if (typeof pokki !== "undefined" && pokki !== null) {
+    pokki.addEventListener('popup_unload', function() {
+      return unload();
+    });
+    old_render = false;
+    old_render_menu = false;
+    pokki.addEventListener('popup_shown', function() {
+      if (old_render) render = true;
+      if (old_render_menu) return render_menu = true;
+    });
+    pokki.addEventListener('popup_hiding', function() {
+      old_render = render;
+      old_render_menu = render_menu;
+      render = false;
+      return render_menu = false;
+    });
+  }
+
+  window.onload = function() {
+    menu_canvas = $('#menu-canvas')[0];
+    menu_context = menu_canvas.getContext('2d');
+    game_canvas = $('#game-canvas')[0];
+    game_context = game_canvas.getContext('2d');
+    return load();
   };
 
 }).call(this);
