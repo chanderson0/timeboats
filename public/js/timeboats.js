@@ -4166,6 +4166,33 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         clearTutorial();
         $("#game-canvas").fadeOut(1000, function() {
           timeboats = loadTutorial({
+            numMines: 0,
+            numCheckpoints: 2
+          }, 1329373618438, game_context, game_canvas.width, game_canvas.height, [
+            {
+              text: 'Click the dock to sail!',
+              left: '10px',
+              top: '10px',
+              width: '200px',
+              fadeIn: 1000,
+              delay: 1250
+            }, {
+              text: 'Visit both checkpoints this time.',
+              left: '200px',
+              top: '10px',
+              width: '200px',
+              fadeIn: 1000,
+              delay: 2500
+            }
+          ]);
+          return $("#game-canvas").fadeIn(1000);
+        });
+        return;
+      } else if (tutorial === 2) {
+        tutorial = 3;
+        clearTutorial();
+        $("#game-canvas").fadeOut(1000, function() {
+          timeboats = loadTutorial({
             numMines: 2,
             numCheckpoints: 1
           }, 1329373618428, game_context, game_canvas.width, game_canvas.height, [
@@ -4202,7 +4229,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
           return $("#game-canvas").fadeIn(1000);
         });
         return;
-      } else if (tutorial === 2) {
+      } else if (tutorial === 3) {
         tutorial = 0;
         clearTutorial();
         render_menu = true;
