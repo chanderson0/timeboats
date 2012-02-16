@@ -1,14 +1,17 @@
 Map = require('./map.coffee').Map
 AssetLoader = require('./asset_loader.coffee').AssetLoader
+Player = require('./turns.coffee').Player
 
 exports.MenuBoats = class MenuBoats
   constructor: (@canvas, @context, @width, @height, @document = null) ->
     @timestep = 1 / 60
     @renderstep = 1 / 60
 
+    seed = new Date().getTime()
+    console.log seed
     Map.getInstance().generate @width / Map.CELL_SIZE_PX,
       @height / Map.CELL_SIZE_PX,
-      new Date().getTime(),
+      seed,
       []
 
     @full_redraw = false
@@ -20,7 +23,7 @@ exports.MenuBoats = class MenuBoats
     else
       @m_canvas = null
 
-    console.log Map.getInstance()
+    # AssetLoader.getInstance().load()
 
   update: (dt) ->
     Map.getInstance().update dt
@@ -28,4 +31,13 @@ exports.MenuBoats = class MenuBoats
   draw: ->
     Map.getInstance().draw @m_context, full_redraw: @full_redraw
     @full_redraw = false
+
+    # Map.getInstance().drawNonTerrain @m_context
+    # for checkpoint in Map.getInstance().checkpoints
+    #   checkpoint.draw @m_context
+    # for mine in Map.getInstance().mines
+    #   mine.draw @m_context
+
     @context.drawImage @m_canvas, 0, 0
+
+    

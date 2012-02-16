@@ -62,8 +62,41 @@ getRandomNicknames = (numNicknames) ->
 
   return nicks.splice(0, numNicknames)
 
+loadTutorial = (mapOptions, seed, context, width, height, messages = []) ->
+  player = new Turns.Player 1, 0, 'You'
+  players = {1: player}
+  order = [1]
+  game = new Turns.Game UUID.generate(), players, order
+  game.setMap seed
+  timeboats = new Timeboats game, context, width, height, null, window.document, {mapOptions:mapOptions}
+  timeboats.turnClicked null
+
+  for message in messages
+    html = new EJS(element: 'tutorial_message', type: '<').render message: message
+    $('#menu').append html
+
+  $("#menu-canvas").fadeOut 1000
+  $("#controls_placeholder").fadeOut 1000
+  $("#instructions_right").fadeOut 1000
+  $("#menu").fadeOut 1000, =>
+    $("#buttons").hide()
+    $("#controls_background").fadeOut 1000
+    $("#controls").fadeIn 1000
+    $("#game-canvas").fadeIn 1000
+    $("#game_right").fadeIn 1000
+    $("#background_right").fadeOut 1000
+
+  timeboats
+
+clearTutorial = (cb) ->
+  $('#menu .message').fadeOut 1000, ->
+    $(this).remove()
+  $('#game-canvas').fadeOut 1000, ->
+    cb()
+
 load = ->
   loaded = true
+  tutorial = 0
 
   api = new API.LocalAPI 'chris', null
 
@@ -125,6 +158,18 @@ load = ->
       if not err
         drawGames data.game_ids, data.games, api
 
+  $('#tutorial').click =>
+    $("#buttons button").prop "disabled", true
+    $("#buttons").fadeOut 1000, =>
+      tutorial = 1
+      timeboats = loadTutorial {numMines: 0, numCheckpoints: 1}, 
+        25401329367224805,
+        game_context,
+        game_canvas.width,
+        game_canvas.height
+      render = true
+      render_menu = false
+
   $('#load .back').click =>
     $("#buttons button").prop "disabled", false
     $("#load").fadeOut 1000, ->
@@ -160,6 +205,33 @@ load = ->
   window.gameOver = (game) =>
     $("#controls").fadeOut 1000
     $("#controls_background").fadeIn 1000
+
+    if tutorial == 1
+      tutorial = 2
+      $("#game-canvas").fadeOut 1000, =>
+        timeboats = loadTutorial {numMines: 2, numCheckpoints: 1}, 
+          25401329367291239,
+          game_context,
+          game_canvas.width,
+          game_canvas.height
+        $("#game-canvas").fadeIn 1000
+      return
+    else if tutorial == 2
+      tutorial = 0
+
+      render_menu = true
+      render = false
+      menu_boats.full_redraw = true
+      $("#game-canvas").fadeOut 1000, =>
+        timeboats = null
+        $("#menu-canvas").fadeIn 1000
+        $("#menu").fadeIn 1000
+        $("#buttons").fadeIn 1000
+        $("#instructions_right").fadeIn 1000
+        $("#background_right").fadeIn 1000
+      
+      return
+
     render_menu = true
     render = false
     menu_boats.full_redraw = true

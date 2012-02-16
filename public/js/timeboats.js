@@ -203,7 +203,7 @@ if (!process.binding) process.binding = function (name) {
 if (!process.cwd) process.cwd = function () { return '.' };
 
 require.define("path", function (require, module, exports, __dirname, __filename) {
-    function filter (xs, fn) {
+function filter (xs, fn) {
     var res = [];
     for (var i = 0; i < xs.length; i++) {
         if (fn(xs[i], i, xs)) res.push(xs[i]);
@@ -341,7 +341,7 @@ exports.extname = function(path) {
 });
 
 require.define("/timeboats.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var AssetLoader, Command, Dock, Map, Point, Square, State, Timeboats;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -361,7 +361,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 
   exports.Timeboats = Timeboats = (function() {
 
-    function Timeboats(game, context, width, height, api, document) {
+    function Timeboats(game, context, width, height, api, document, options) {
       var checkpoint, gamePlayer, initialState, mine, startDock, _i, _j, _len, _len2, _ref, _ref2;
       this.game = game;
       this.context = context;
@@ -369,6 +369,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.height = height;
       this.api = api != null ? api : null;
       this.document = document != null ? document : null;
+      if (options == null) options = {};
       this.onMouseMove = __bind(this.onMouseMove, this);
       this.onMouseDown = __bind(this.onMouseDown, this);
       this.timestep = 1 / 60;
@@ -381,7 +382,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.active_commands = [];
       if (!(this.game.mapSeed != null)) this.game.setMap(new Date().getTime());
       initialState = new State();
-      Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, this.game.mapSeed, this.game.players);
+      Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, this.game.mapSeed, this.game.players, options.mapOptions || {});
       _ref = Map.getInstance().checkpoints;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         checkpoint = _ref[_i];
@@ -493,6 +494,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         if (this.game.turns.length > 0) {
           $("#playbutton").html("Play");
           $("#playbutton").prop("disabled", false);
+          $("#slider span").show();
         }
         return $("#timeslider").prop("disabled", false);
       } else if (oldState === "paused" && newState === "playing") {
@@ -707,7 +709,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 });
 
 require.define("/state.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var Map, Serializable, State;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -798,7 +800,7 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
     };
 
     State.prototype.update = function(dt) {
-      var command, id, object, _fn, _i, _len, _ref, _ref2;
+      var command, gold, id, object, _fn, _i, _len, _ref, _ref2, _ref3;
       var _this = this;
       _ref = this.commands;
       _fn = function(command) {
@@ -813,6 +815,16 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
         object = _ref2[id];
         object.update(dt, this);
       }
+      gold = 0;
+      _ref3 = this.objects;
+      for (id in _ref3) {
+        object = _ref3[id];
+        if (object.__type === 'Mine') {
+          gold++;
+          break;
+        }
+      }
+      if (gold === 0) this.gameover = true;
       return true;
     };
 
@@ -851,7 +863,7 @@ require.define("/state.coffee", function (require, module, exports, __dirname, _
 });
 
 require.define("/serializable.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var Serializable;
   var __slice = Array.prototype.slice;
 
@@ -924,7 +936,7 @@ require.define("/serializable.coffee", function (require, module, exports, __dir
 });
 
 require.define("/map.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var Checkpoint, Dock, GameObject, Gaussian, Map, MapCell, Mine, Point, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -1255,8 +1267,9 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       return Math.floor(p / Map.CELL_SIZE_PX);
     };
 
-    Map.prototype.generate = function(width, height, seed, players) {
+    Map.prototype.generate = function(width, height, seed, players, options) {
       var ck, ckPosition, clear, col, collisionObjects, dock, i, m, mPosition, numCheckpoints, numGaussians, numMines, player, playerId, quadrantOffset, x, y, _ref, _ref2, _ref3, _ref4;
+      if (options == null) options = {};
       this.width = width;
       this.height = height;
       this.random = new Random(seed);
@@ -1300,7 +1313,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
         this.docks[playerId] = dock;
         collisionObjects.push(dock);
       }
-      numCheckpoints = 3;
+      numCheckpoints = options.numCheckpoints != null ? options.numCheckpoints : 3;
       for (i = 1; 1 <= numCheckpoints ? i <= numCheckpoints : i >= numCheckpoints; 1 <= numCheckpoints ? i++ : i--) {
         ckPosition = this.getRandomClearPosition(collisionObjects);
         ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX);
@@ -1308,8 +1321,8 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
         this.checkpoints.push(ck);
         collisionObjects.push(ck);
       }
-      numMines = 10;
-      for (i = 1; 1 <= numMines ? i <= numMines : i >= numMines; 1 <= numMines ? i++ : i--) {
+      numMines = options.numMines != null ? options.numMines : 10;
+      for (i = 0; 0 <= numMines ? i < numMines : i > numMines; 0 <= numMines ? i++ : i--) {
         mPosition = this.getRandomClearPosition(collisionObjects);
         m = new Mine("mine" + i, mPosition.x * Map.CELL_SIZE_PX, mPosition.y * Map.CELL_SIZE_PX);
         this.mines.push(m);
@@ -1422,7 +1435,7 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
 });
 
 require.define("/game_object.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var GameObject, Serializable;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -1460,7 +1473,7 @@ require.define("/game_object.coffee", function (require, module, exports, __dirn
 });
 
 require.define("/map_cell.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var GameObject, MapCell;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -1518,7 +1531,7 @@ require.define("/map_cell.coffee", function (require, module, exports, __dirname
 });
 
 require.define("/random.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var Random;
 
   exports.Random = Random = (function() {
@@ -1549,7 +1562,7 @@ require.define("/random.coffee", function (require, module, exports, __dirname, 
 });
 
 require.define("/gaussian.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var Gaussian;
 
   exports.Gaussian = Gaussian = (function() {
@@ -1605,7 +1618,7 @@ require.define("/gaussian.coffee", function (require, module, exports, __dirname
 });
 
 require.define("/point.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var Point;
 
   exports.Point = Point = (function() {
@@ -1665,7 +1678,7 @@ require.define("/point.coffee", function (require, module, exports, __dirname, _
 });
 
 require.define("/checkpoint.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var AssetLoader, Checkpoint, GameObject2D, Goldsplosion, Point;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -1771,7 +1784,7 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
 });
 
 require.define("/game_object_2d.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var GameObject, GameObject2D, Point;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -1853,7 +1866,7 @@ require.define("/game_object_2d.coffee", function (require, module, exports, __d
 });
 
 require.define("/asset_loader.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var AssetLoader;
 
   exports.AssetLoader = AssetLoader = (function() {
@@ -1939,7 +1952,7 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
 });
 
 require.define("/goldsplosion.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var AssetLoader, GameObject2D, Goldsplosion, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -2019,7 +2032,7 @@ require.define("/goldsplosion.coffee", function (require, module, exports, __dir
 });
 
 require.define("/dock.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var AssetLoader, Dock, GameObject2D;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -2095,7 +2108,7 @@ require.define("/dock.coffee", function (require, module, exports, __dirname, __
 });
 
 require.define("/mine.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var AssetLoader, GameObject2D, Goldsplosion, Mine, Point, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -2139,7 +2152,7 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
     };
 
     Mine.prototype.update = function(dt, state) {
-      var gold, id, object, rand, _ref, _ref2;
+      var id, object, rand, _ref;
       this.dt += dt;
       this.dtTotal += dt;
       if (this.dt >= 0.4) {
@@ -2158,16 +2171,6 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
             state.addObject("goldsplosion" + this.id, new Goldsplosion("goldsplosion" + this.id, this.x + 24, this.y + 6));
           }
           state.removeObject(this.id);
-          gold = 0;
-          _ref2 = state.objects;
-          for (id in _ref2) {
-            object = _ref2[id];
-            if (object.__type === 'Mine') {
-              gold++;
-              break;
-            }
-          }
-          if (gold === 0) state.gameover = true;
           break;
         }
       }
@@ -2194,7 +2197,7 @@ require.define("/mine.coffee", function (require, module, exports, __dirname, __
 });
 
 require.define("/square.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var AssetLoader, Explosion, GameObject2D, Map, Point, Square;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -2309,7 +2312,7 @@ require.define("/square.coffee", function (require, module, exports, __dirname, 
 });
 
 require.define("/explosion.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var AssetLoader, Explosion, GameObject2D, Map, Point, Random;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -2410,7 +2413,7 @@ require.define("/explosion.coffee", function (require, module, exports, __dirnam
 });
 
 require.define("/command.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var Command, ExplodeCommand, JoinCommand, MouseCommand, Serializable;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -2513,16 +2516,19 @@ require.define("/command.coffee", function (require, module, exports, __dirname,
 });
 
 require.define("/menu_boats.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
-  var AssetLoader, Map, MenuBoats;
+(function() {
+  var AssetLoader, Map, MenuBoats, Player;
 
   Map = require('./map.coffee').Map;
 
   AssetLoader = require('./asset_loader.coffee').AssetLoader;
 
+  Player = require('./turns.coffee').Player;
+
   exports.MenuBoats = MenuBoats = (function() {
 
     function MenuBoats(canvas, context, width, height, document) {
+      var seed;
       this.canvas = canvas;
       this.context = context;
       this.width = width;
@@ -2530,7 +2536,9 @@ require.define("/menu_boats.coffee", function (require, module, exports, __dirna
       this.document = document != null ? document : null;
       this.timestep = 1 / 60;
       this.renderstep = 1 / 60;
-      Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, new Date().getTime(), []);
+      seed = new Date().getTime();
+      console.log(seed);
+      Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, seed, []);
       this.full_redraw = false;
       if (this.document != null) {
         this.m_canvas = this.document.createElement('canvas');
@@ -2540,7 +2548,6 @@ require.define("/menu_boats.coffee", function (require, module, exports, __dirna
       } else {
         this.m_canvas = null;
       }
-      console.log(Map.getInstance());
     }
 
     MenuBoats.prototype.update = function(dt) {
@@ -2564,7 +2571,7 @@ require.define("/menu_boats.coffee", function (require, module, exports, __dirna
 });
 
 require.define("/turns.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var Game, GameRenderer, Map, Player, Serializable, Turn, UUID;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -2825,7 +2832,7 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
 });
 
 require.define("/lib/uuid.js", function (require, module, exports, __dirname, __filename) {
-    /*
+/*
  The MIT License: Copyright (c) 2010 LiosK.
 */
 function UUID(){}UUID.generate=function(){var a=UUID._getRandomInt,b=UUID._hexAligner;return b(a(32),8)+"-"+b(a(16),4)+"-"+b(16384|a(12),4)+"-"+b(32768|a(14),4)+"-"+b(a(48),12)};UUID._getRandomInt=function(a){if(a<0)return NaN;if(a<=30)return 0|Math.random()*(1<<a);if(a<=53)return(0|Math.random()*1073741824)+(0|Math.random()*(1<<a-30))*1073741824;return NaN};UUID._getIntAligner=function(a){return function(b,f){for(var c=b.toString(a),d=f-c.length,e="0";d>0;d>>>=1,e+=e)if(d&1)c=e+c;return c}};
@@ -2835,7 +2842,7 @@ exports.generate = UUID.generate
 });
 
 require.define("/api.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+(function() {
   var API, Command, Explosion, GameObject, GameObject2D, LocalAPI, RemoteAPI, Serializable, Square, State, Turns, async, classmap;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
 
@@ -3041,7 +3048,7 @@ require.define("/api.coffee", function (require, module, exports, __dirname, __f
 });
 
 require.define("/lib/async.js", function (require, module, exports, __dirname, __filename) {
-    /*global setTimeout: false, console: false */
+/*global setTimeout: false, console: false */
 (function () {
 
     var async = {};
@@ -3735,7 +3742,7 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
 
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var API, MenuBoats, Timeboats, Turns, UUID, async, clearPlayers, drawGames, drawPlayer, game_canvas, game_context, getRandomNicknames, load, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
+  var API, MenuBoats, Timeboats, Turns, UUID, async, clearPlayers, clearTutorial, drawGames, drawPlayer, game_canvas, game_context, getRandomNicknames, load, loadTutorial, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
 
   Timeboats = require('./timeboats.coffee').Timeboats;
 
@@ -3824,10 +3831,59 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     return nicks.splice(0, numNicknames);
   };
 
+  loadTutorial = function(mapOptions, seed, context, width, height, messages) {
+    var game, html, message, order, player, players, timeboats, _i, _len;
+    var _this = this;
+    if (messages == null) messages = [];
+    player = new Turns.Player(1, 0, 'You');
+    players = {
+      1: player
+    };
+    order = [1];
+    game = new Turns.Game(UUID.generate(), players, order);
+    game.setMap(seed);
+    timeboats = new Timeboats(game, context, width, height, null, window.document, {
+      mapOptions: mapOptions
+    });
+    timeboats.turnClicked(null);
+    for (_i = 0, _len = messages.length; _i < _len; _i++) {
+      message = messages[_i];
+      html = new EJS({
+        element: 'tutorial_message',
+        type: '<'
+      }).render({
+        message: message
+      });
+      $('#menu').append(html);
+    }
+    $("#menu-canvas").fadeOut(1000);
+    $("#controls_placeholder").fadeOut(1000);
+    $("#instructions_right").fadeOut(1000);
+    $("#menu").fadeOut(1000, function() {
+      $("#buttons").hide();
+      $("#controls_background").fadeOut(1000);
+      $("#controls").fadeIn(1000);
+      $("#game-canvas").fadeIn(1000);
+      $("#game_right").fadeIn(1000);
+      return $("#background_right").fadeOut(1000);
+    });
+    return timeboats;
+  };
+
+  clearTutorial = function(cb) {
+    $('#menu .message').fadeOut(1000, function() {
+      return $(this).remove();
+    });
+    return $('#game-canvas').fadeOut(1000, function() {
+      return cb();
+    });
+  };
+
   load = function() {
-    var api, dt, frame, frame_num, game, gdt, last, menu_boats, rdt, timeboats;
+    var api, dt, frame, frame_num, game, gdt, last, menu_boats, rdt, timeboats, tutorial;
     var _this = this;
     loaded = true;
+    tutorial = 0;
     api = new API.LocalAPI('chris', null);
     if (typeof pokki !== "undefined" && pokki !== null) {
       pokki.setPopupClientSize(900, 627);
@@ -3884,6 +3940,18 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         if (!err) return drawGames(data.game_ids, data.games, api);
       });
     });
+    $('#tutorial').click(function() {
+      $("#buttons button").prop("disabled", true);
+      return $("#buttons").fadeOut(1000, function() {
+        tutorial = 1;
+        timeboats = loadTutorial({
+          numMines: 0,
+          numCheckpoints: 1
+        }, 25401329367224805, game_context, game_canvas.width, game_canvas.height);
+        render = true;
+        return render_menu = false;
+      });
+    });
     $('#load .back').click(function() {
       $("#buttons button").prop("disabled", false);
       return $("#load").fadeOut(1000, function() {
@@ -3921,6 +3989,31 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       var bestPlayer, goodScore, isTie, maxScore, player, player_id, tieScore, _i, _len, _ref;
       $("#controls").fadeOut(1000);
       $("#controls_background").fadeIn(1000);
+      if (tutorial === 1) {
+        tutorial = 2;
+        $("#game-canvas").fadeOut(1000, function() {
+          timeboats = loadTutorial({
+            numMines: 2,
+            numCheckpoints: 1
+          }, 25401329367291239, game_context, game_canvas.width, game_canvas.height);
+          return $("#game-canvas").fadeIn(1000);
+        });
+        return;
+      } else if (tutorial === 2) {
+        tutorial = 0;
+        render_menu = true;
+        render = false;
+        menu_boats.full_redraw = true;
+        $("#game-canvas").fadeOut(1000, function() {
+          timeboats = null;
+          $("#menu-canvas").fadeIn(1000);
+          $("#menu").fadeIn(1000);
+          $("#buttons").fadeIn(1000);
+          $("#instructions_right").fadeIn(1000);
+          return $("#background_right").fadeIn(1000);
+        });
+        return;
+      }
       render_menu = true;
       render = false;
       menu_boats.full_redraw = true;
