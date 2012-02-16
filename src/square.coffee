@@ -7,7 +7,7 @@ AssetLoader = require('./asset_loader.coffee').AssetLoader
 exports.Square = class Square extends GameObject2D
   __type: 'Square'
 
-  constructor: (@id, @x, @y, @size, @color = 0) ->
+  constructor: (@id, @x, @y, @size, @color = 0, @playerId = 0) ->
     super @id, @x, @y, 0, 0, -1.57
 
     @destx = @x
@@ -23,14 +23,16 @@ exports.Square = class Square extends GameObject2D
     sq.destx = @destx
     sq.desty = @desty
     sq.invincibleTime = @invincibleTime
+    sq.playerId = @playerId
     return sq
 
   explode: (state) ->
     if @invincibleTime > 0
       return
     id = Math.floor(Math.random() * 1000000)
-    explosion = new Explosion id, @x, @y, 90
+    explosion = new Explosion id, @x, @y, 80
     state.addObject id, explosion
+    Map.getInstance().collideWith(explosion, state, true);
     state.removeObject @id
     state.addScore @id, 1, 'boat'
 
@@ -44,6 +46,8 @@ exports.Square = class Square extends GameObject2D
     dist = Point.getLength dir.x, dir.y
     if @invincibleTime > 0
       @invincibleTime -= 0.7 * dt
+      if Point.getDistance(@x, @y, Map.getInstance().docks[@playerId].x, Map.getInstance().docks[@playerId].y) > 60
+        @invincibleTime = 0
 
     to_move = Point.normalize dir.x, dir.y, Math.sqrt(dist) * dt * 5000
     if dist < 0.5
