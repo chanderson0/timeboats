@@ -157,6 +157,12 @@ load = ->
   $('#newgame2p').click =>
     startGame 2
 
+  $('#newgame3p').click =>
+    startGame 3
+
+  $('#newgame4p').click =>
+    startGame 4
+
   $('#loadgame').click =>
     $("#buttons button").prop "disabled", true
     $("#buttons").fadeOut()

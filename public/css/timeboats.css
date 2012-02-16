@@ -104,21 +104,21 @@ html, body {
   background-color: #7e2f2f;
 }
 
-#menu #newgames {
+#menu #newgames, #menu #othernewgames {
   width: 320px;
   margin: 20px auto;
   height: 50px;
 }
 
-#newgames button {
+#newgames button, #othernewgames button {
   margin: 0;
 }
 
-#newgame1p {
+#newgame1p, #newgame3p {
   float: left;
 }
 
-#newgame2p {
+#newgame2p, #newgame4p {
   float: right;
 }
 

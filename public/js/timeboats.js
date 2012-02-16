@@ -4120,6 +4120,12 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     $('#newgame2p').click(function() {
       return startGame(2);
     });
+    $('#newgame3p').click(function() {
+      return startGame(3);
+    });
+    $('#newgame4p').click(function() {
+      return startGame(4);
+    });
     $('#loadgame').click(function() {
       $("#buttons button").prop("disabled", true);
       $("#buttons").fadeOut();
