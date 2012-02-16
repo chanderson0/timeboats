@@ -73,7 +73,7 @@ loadTutorial = (mapOptions, seed, context, width, height, messages = []) ->
   order = [1]
   game = new Turns.Game UUID.generate(), players, order
   game.setMap seed
-  timeboats = new Timeboats game, context, width, height, null, window.document, {mapOptions:mapOptions}
+  timeboats = new Timeboats game, context, width, height, null, window.document, {mapOptions:mapOptions}, 20
   timeboats.turnClicked null
 
   for message in messages
@@ -236,26 +236,26 @@ load = ->
       clearTutorial()
       $("#game-canvas").fadeOut 1000, =>
         timeboats = loadTutorial {numMines: 0, numCheckpoints: 2},
-          1329373618438,
+          1329373618445,
           game_context,
           game_canvas.width,
           game_canvas.height,
           [
             {
               text: 'Click the dock to sail!'
-              left: '10px'
-              top: '10px'
+              left: '210px'
+              top: '120px'
               width: '200px'
               fadeIn: 1000
               delay: 1250
             },
             {
-              text: 'Visit both checkpoints this time.'
-              left: '200px'
-              top: '10px'
-              width: '200px'
+              text: "You'll need more than one ship this time."
+              left: '370px'
+              top: '370px'
+              width: '300px'
               fadeIn: 1000
-              delay: 2500
+              delay: 3000
             }
           ]
         $("#game-canvas").fadeIn 1000
@@ -293,14 +293,6 @@ load = ->
               width: '150px'
               fadeIn: 1000
               delay: 4500
-            },
-            {
-              text: 'Oh, and yer ships are stuck in a cursed time loop...'
-              left: '420px'
-              top: '400px'
-              width: '280px'
-              fadeIn: 1000
-              delay: 7000
             }
           ]
         $("#game-canvas").fadeIn 1000

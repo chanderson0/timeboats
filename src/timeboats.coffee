@@ -7,7 +7,7 @@ AssetLoader = require('./asset_loader.coffee').AssetLoader
 Dock = require('./dock.coffee').Dock
 
 exports.Timeboats = class Timeboats
-  constructor: (@game, @context, @width, @height, @api = null, @document = null, options = {}) ->
+  constructor: (@game, @context, @width, @height, @api = null, @document = null, options = {}, @max_time = 10) ->
     @timestep = 1 / 60
     @renderstep = 1 / 60
 
@@ -280,7 +280,7 @@ exports.Timeboats = class Timeboats
           if object.__type == 'Mine'
             Map.getInstance().collideWith(object, next_state)
 
-        if player_count == 0 or @time > 10
+        if player_count == 0 or @time > @max_time
           @frame_history.splice @frame_num + 1,
             @frame_history.length - @frame_num
           @updateSlider(@frame_num, @frame_num)
@@ -300,7 +300,7 @@ exports.Timeboats = class Timeboats
 
   drawHUD: (context) ->
 
-    time = 10 - @frame_history[@frame_num].time
+    time = @max_time - @frame_history[@frame_num].time
     time = 0 if not time? or time < 0
     $('#time').html time.toFixed 2
 
