@@ -275,6 +275,8 @@ exports.Timeboats = class Timeboats
         for id, object of next_state.objects
           if object.__type == 'Square' || object.__type == 'Explosion'
             player_count++
+          if object.__type == 'Mine'
+            Map.getInstance().collideWith(object, next_state)
 
         if player_count == 0 or @time > 10
           @frame_history.splice @frame_num + 1,

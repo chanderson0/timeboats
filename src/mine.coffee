@@ -3,6 +3,7 @@ AssetLoader = require('./asset_loader.coffee').AssetLoader
 Point = require('./point.coffee').Point
 Random = require('./random.coffee').Random
 Goldsplosion = require('./goldsplosion.coffee').Goldsplosion
+Minesplosion = require('./minesplosion.coffee').Minesplosion
 
 exports.Mine = class Mine extends GameObject2D
   __type: 'Mine'
@@ -48,6 +49,9 @@ exports.Mine = class Mine extends GameObject2D
       @vx += -7.0 + rand.nextf() * 14.0
     @vx *= 0.999
 
+    if @x < -@radius - 5 || @y < -@radius || @x > 720 + @radius + 5 || @y > 560 + @radius
+      state.removeObject @id
+
     super dt
 
   draw: (context) ->
@@ -55,3 +59,8 @@ exports.Mine = class Mine extends GameObject2D
       context.drawImage(AssetLoader.getInstance().getAsset("gold"), @x - 5, @y, 37,27)
     else
       context.drawImage(AssetLoader.getInstance().getAsset("mine" + @frame), @x, @y, 31, 31)
+
+  collide: (state) ->
+    explosion = new Minesplosion "minesplosion" + @id, @x + 15, @y + 5, 40
+    state.addObject "minesplosion" + @id, explosion
+    state.removeObject @id
