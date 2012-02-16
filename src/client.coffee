@@ -35,9 +35,31 @@ clearPlayers = ->
   $('#gameover .players').html ''
 
 # Code to flesh out.
-drawPlayer = (player) ->
-  html = new EJS(element: 'gameover_player_template', type: '<').render player: player
+drawPlayer = (player, goodScore = 5) ->
+  positiveRanks = [ "Captain", "First Mate", "Swordsman", "Bombardier", "Admiral", "Colonel" ]
+  negativeRanks = [ "Deck Boy", "Rigging Monkey", "Drunkard", "Ship's Cook", "Seasick", "Davy Jones" ]
+  rank = "sd"
+  if player.scores['gold'] >= goodScore
+    rank = positiveRanks[parseInt(Math.random() * positiveRanks.length)]
+  else
+    rank = negativeRanks[parseInt(Math.random() * negativeRanks.length)]
+  console.log "sending rank " + rank
+  html = new EJS(element: 'gameover_player_template', type: '<').render
+    player: player
+    rank: rank
   $('#gameover .players').append html
+
+getRandomNicknames = (numNicknames) ->
+  nicks = [ "Ahab", "Englehorn", "Haddock", "Hook", "Long John Silver", "Yellowbeard", "Redbeard", "The Kraken", "Mad Jack", "Billy Bones" ]
+  # shuffle
+  i = nicks.length
+  while i
+    j = parseInt(Math.random() * i)
+    x = nicks[--i]
+    nicks[i] = nicks[j]
+    nicks[j] = x
+
+  return nicks.splice(0, numNicknames)
 
 load = ->
   loaded = true
@@ -52,14 +74,15 @@ load = ->
     $("#menu").fadeIn 1000
     $("#controls_placeholder").fadeIn 1000
     $("#instructions_right").fadeIn 1000
-  
+
   game = null
   timeboats = null
 
   $('#newgame').click =>
     render = false
-    player1 = new Turns.Player 1, 0
-    player2 = new Turns.Player 2, 1
+    nicknames = getRandomNicknames(2)
+    player1 = new Turns.Player 1, 0, nicknames[0]
+    player2 = new Turns.Player 2, 1, nicknames[1]
     players = {1: player1, 2: player2}
     order = [1, 2]
 
@@ -105,7 +128,7 @@ load = ->
     $("#buttons button").prop "disabled", false
     $("#load").fadeOut 1000, ->
       $("#buttons").fadeIn 1000
-    
+
   window.gameClicked = (id) =>
     render = false
     $('#loading').show()
@@ -157,9 +180,16 @@ load = ->
         $("#background_right").fadeIn 1000
 
     # TODO: flesh out this code here and in drawPlayer()
+    maxScore = 0
+    bestPlayer = null
+    goodScore = 10 / game.players.length
     for player_id in game.order
       player = game.players[player_id]
-      drawPlayer player
+      if player.scores['gold'] > maxScore
+        maxScore = player.scores['gold']
+        bestPlayer = player
+      drawPlayer player, goodScore
+    $("#gameover .winner").append "#{bestPlayer.nickname} is the winner!"
 
   $("#back_to_menu").click =>
     $("#controls").fadeOut 1000
@@ -253,7 +283,7 @@ unload = ->
 
 # Setup.
 if pokki?
-  pokki.addEventListener 'popup_unload', -> 
+  pokki.addEventListener 'popup_unload', ->
     unload()
 
   old_render = false

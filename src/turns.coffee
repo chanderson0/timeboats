@@ -10,7 +10,7 @@ exports.Player = class Player extends Serializable
       @id = UUID.generate()
     if not @nickname?
       @nickname = ("" + @id).substring(0, 10)
-      
+
     @scores = {}
 
     super
@@ -57,7 +57,7 @@ class GameRenderer
     html = new EJS(element: 'player_template').render
       active: if active then 'active' else ''
       id: player.id
-      name: player.color
+      name: player.nickname
       score: player.score
     if update
       $('#'+player.id).replaceWith html

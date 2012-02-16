@@ -140,21 +140,38 @@ button.back {
 
 #gameover .players {
   position: absolute;
+  top: 240px;
+  left: 160px;
+  width: 400px;
+  height: 253px;
+  background: #FFF;
+  opacity: 0.5;
+  box-shadow: 1px 1px 4px #444;
+  color: #333;
+}
+
+#gameover .winner {
+  position: absolute;
   top: 200px;
   left: 160px;
   width: 400px;
-  height: 293px;
-  background: #000;
+  height: 32px;
+  background: #FFFDBF;
   box-shadow: 1px 1px 4px #444;
-  color: #fff;
+  color: #333;
+  font-family: Verdana, sans-serif;
+  padding: 4px 0 4px 0;
+  vertical-align:middle;
+  font-weight: bold;
 }
 
 #gameover .players div {
   width: 90%;
-  height: 50px;
+  margin-bottom:4px;
   text-align: left;
-  background: #111;
+  background: transparent;
   margin: 10px auto;
+  font-family: Verdana, sans-serif;
 }
 
 #gameover button {
@@ -382,6 +399,7 @@ canvas {
 }
 
 #player_tiles .player {
+  font-size: 8pt;
   height: 20px;
   width: 133px;
   padding: 5px;
@@ -397,6 +415,12 @@ canvas {
 .player_name {
   color: #333333;
   font-weight: bold;
+}
+
+.player_rank {
+  color: #555;
+  font-weight:bold;
+  padding-left: 8px;
 }
 
 .player_score {

@@ -41,6 +41,7 @@
           <button class="back">Back</button>
         </div>
         <div id="gameover">
+	  <div class="winner"></div>
           <div class="players"></div>
           <button class="back">Back</button>
         </div>
@@ -110,7 +111,10 @@
   <script id="gameover_player_template" type='text/ejs'>
     <div id="[%= player.id %]" class="player">
       <span class="player_name">[%= player.nickname %]</span>
-      <span class="player_score">[%= player.score %]</span>
+      <span class="player_score">[%= player.scores['gold'] %] gold</span>
+    </div>
+    <div class="player">
+      <span class="player_rank">Rank: [%= rank %]</span>
     </div>
   </script>
 </body>

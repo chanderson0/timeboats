@@ -41,8 +41,6 @@ exports.Goldsplosion = class Goldsplosion extends GameObject2D
     context.translate @x, @y
     context.globalAlpha = 0.85 * (@ttl / @lifespan)
 
-    console.log goldTypes[0], goldTypes[1], goldTypes[2], goldTypes[3], goldTypes[4], goldTypes[5], goldTypes[6], goldTypes[7], goldTypes[8], goldTypes[9]
-
     for i in [0..numGolds - 1]
       size = halfsize = 0
       if (goldTypes[i] == 0)

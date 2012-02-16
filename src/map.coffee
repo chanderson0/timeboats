@@ -289,7 +289,7 @@ exports.Map = class Map extends GameObject
       collisionObjects.push ck
 
     # now add some mines.
-    numMines = 8
+    numMines = 10
     for i in [1..numMines]
       mPosition = @getRandomClearPosition(collisionObjects)
       m = new Mine("mine" + i, mPosition.x * Map.CELL_SIZE_PX, mPosition.y * Map.CELL_SIZE_PX)
