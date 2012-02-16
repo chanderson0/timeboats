@@ -104,6 +104,24 @@ html, body {
   background-color: #7e2f2f;
 }
 
+#menu #newgames {
+  width: 320px;
+  margin: 20px auto;
+  height: 50px;
+}
+
+#newgames button {
+  margin: 0;
+}
+
+#newgame1p {
+  float: left;
+}
+
+#newgame2p {
+  float: right;
+}
+
 .message {
   position: absolute;
   left: 0;
