@@ -226,7 +226,7 @@ exports.Map = class Map extends GameObject
   # width, height measured in cells
   # seed: int
   # players: instance of Turns.Game.players
-  generate: (width, height, seed, players) ->
+  generate: (width, height, seed, players, options = {}) ->
     @width = width
     @height = height
     @random = new Random(seed)
@@ -280,7 +280,7 @@ exports.Map = class Map extends GameObject
       collisionObjects.push dock
 
     # now add some checkpoints.
-    numCheckpoints = 3 # TODO probably should be configurable from outside the class
+    numCheckpoints = if options.numCheckpoints? then options.numCheckpoints else 3
     for i in [1..numCheckpoints]
       ckPosition = @getRandomClearPosition(collisionObjects)
       ck = new Checkpoint("checkpoint" + i, ckPosition.x * Map.CELL_SIZE_PX, ckPosition.y * Map.CELL_SIZE_PX)
@@ -289,8 +289,8 @@ exports.Map = class Map extends GameObject
       collisionObjects.push ck
 
     # now add some mines.
-    numMines = 10
-    for i in [1..numMines]
+    numMines = if options.numMines? then options.numMines else 10
+    for i in [0...numMines]
       mPosition = @getRandomClearPosition(collisionObjects)
       m = new Mine("mine" + i, mPosition.x * Map.CELL_SIZE_PX, mPosition.y * Map.CELL_SIZE_PX)
       @mines.push m

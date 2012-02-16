@@ -41,16 +41,6 @@ exports.Mine = class Mine extends GameObject2D
           state.addObject("goldsplosion#{@id}", new Goldsplosion("goldsplosion#{@id}", @x + 24, @y + 6))
         state.removeObject @id
 
-        # Detect end game
-        gold = 0
-        for id, object of state.objects
-          if object.__type == 'Mine'
-            gold++
-            break
-
-        if gold == 0
-          state.gameover = true
-
         break
 
     rand = new Random(Math.floor(@x + @y + @dtTotal * 10000))

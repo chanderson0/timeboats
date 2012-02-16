@@ -76,6 +76,17 @@ exports.State = class State extends Serializable
     for id, object of @objects
       object.update dt, this
 
+    # UGH
+    # Detect end game
+    gold = 0
+    for id, object of @objects
+      if object.__type == 'Mine'
+        gold++
+        break
+
+    if gold == 0
+      @gameover = true
+
     true
 
   drawRegions: (context) ->

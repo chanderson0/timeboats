@@ -7,7 +7,7 @@ AssetLoader = require('./asset_loader.coffee').AssetLoader
 Dock = require('./dock.coffee').Dock
 
 exports.Timeboats = class Timeboats
-  constructor: (@game, @context, @width, @height, @api = null, @document = null) ->
+  constructor: (@game, @context, @width, @height, @api = null, @document = null, options = {}) ->
     @timestep = 1 / 60
     @renderstep = 1 / 60
 
@@ -27,7 +27,8 @@ exports.Timeboats = class Timeboats
     Map.getInstance().generate @width / Map.CELL_SIZE_PX,
       @height / Map.CELL_SIZE_PX,
       @game.mapSeed,
-      @game.players
+      @game.players,
+      options.mapOptions || {}
 
     for checkpoint in Map.getInstance().checkpoints
       initialState.addObject(checkpoint.id, checkpoint)
@@ -152,6 +153,7 @@ exports.Timeboats = class Timeboats
       if @game.turns.length > 0
         $("#playbutton").html "Play"
         $("#playbutton").prop "disabled", false
+        $("#slider span").show()
       $("#timeslider").prop "disabled", false
     else if oldState == "paused" and newState == "playing"
       @gamestate = "playing"
