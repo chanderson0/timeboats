@@ -90,6 +90,20 @@ html, body {
   background-color: #7e2f2f;
 }
 
+.message {
+  position: absolute;
+  left: 0;
+  top: 0;  
+  font-family: Verdana, sans-serif;
+  color: #c0262f;
+  font-weight: bold;
+  text-align: center;
+  width: 200px;
+  z-index: 1000000;
+  display: none;
+  pointer-events: none;
+}
+
 #menu #load {
   position: absolute;
   top: 260px;

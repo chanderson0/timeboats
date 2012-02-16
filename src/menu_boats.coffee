@@ -12,7 +12,8 @@ exports.MenuBoats = class MenuBoats
     Map.getInstance().generate @width / Map.CELL_SIZE_PX,
       @height / Map.CELL_SIZE_PX,
       seed,
-      []
+      []# [new Player(0, 0)],
+      # { numCheckpoints: 1, numMines: 2 }
 
     @full_redraw = false
     if @document?

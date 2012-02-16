@@ -72,7 +72,11 @@ loadTutorial = (mapOptions, seed, context, width, height, messages = []) ->
 
   for message in messages
     html = new EJS(element: 'tutorial_message', type: '<').render message: message
-    $('#menu').append html
+    m = $(html).appendTo $("#left")
+    m.delay(message.delay).fadeIn(message.fadeIn) if message.fadeIn? and message.delay?
+    m.css 'top', message.top
+    m.css 'left', message.left
+    m.css 'width', message.width if message.width?
 
   $("#menu-canvas").fadeOut 1000
   $("#controls_placeholder").fadeOut 1000
@@ -87,11 +91,9 @@ loadTutorial = (mapOptions, seed, context, width, height, messages = []) ->
 
   timeboats
 
-clearTutorial = (cb) ->
-  $('#menu .message').fadeOut 1000, ->
+clearTutorial = ->
+  $('#left .message').fadeOut 1000, ->
     $(this).remove()
-  $('#game-canvas').fadeOut 1000, ->
-    cb()
 
 load = ->
   loaded = true
@@ -165,7 +167,25 @@ load = ->
         25401329367224805,
         game_context,
         game_canvas.width,
-        game_canvas.height
+        game_canvas.height,
+        [
+          {
+            text: 'Click once to ready, again to GO!'
+            left: '125px'
+            top: '460px'
+            width: '150px'
+            fadeIn: 1000
+            delay: 1500
+          },
+          {
+            text: 'Then mouse here to hit the checkpoint.'
+            left: '45px'
+            top: '220px'
+            width: '150px'
+            fadeIn: 1000
+            delay: 2250
+          }
+        ]
       render = true
       render_menu = false
 
@@ -207,27 +227,55 @@ load = ->
 
     if tutorial == 1
       tutorial = 2
+      clearTutorial()
       $("#game-canvas").fadeOut 1000, =>
         timeboats = loadTutorial {numMines: 2, numCheckpoints: 1}, 
-          25401329367291239,
+          1329373618428,
           game_context,
           game_canvas.width,
-          game_canvas.height
+          game_canvas.height,
+          [
+            {
+              text: 'Avoid the mines.'
+              left: '45px'
+              top: '350px'
+              width: '150px'
+              fadeIn: 1000
+              delay: 1250
+            },
+            {
+              text: 'Hit the checkpoint to turn mines into gold.'
+              left: '530px'
+              top: '120px'
+              width: '150px'
+              fadeIn: 1000
+              delay: 2200
+            },
+            {
+              text: 'Multiple turns play at the same time. Win by collecting all the gold!'
+              left: '370px'
+              top: '280px'
+              width: '150px'
+              fadeIn: 1000
+              delay: 3000
+            }
+          ]
         $("#game-canvas").fadeIn 1000
       return
     else if tutorial == 2
       tutorial = 0
-
+      clearTutorial()
       render_menu = true
       render = false
       menu_boats.full_redraw = true
       $("#game-canvas").fadeOut 1000, =>
         timeboats = null
         $("#menu-canvas").fadeIn 1000
+        $("#instructions_right").fadeIn 1000
         $("#menu").fadeIn 1000
         $("#buttons").fadeIn 1000
-        $("#instructions_right").fadeIn 1000
-        $("#background_right").fadeIn 1000
+        $("#controls_placeholder").fadeIn 1000
+        $("#buttons button").prop "disabled", false
       
       return
 
@@ -264,6 +312,7 @@ load = ->
     $("#gameover .winner").append "#{bestPlayer.nickname} is the winner!"
 
   $("#back_to_menu").click =>
+    clearTutorial()
     $("#controls").fadeOut 1000
     $("#controls_background").fadeIn 1000
     $("#game_right").fadeOut 1000
