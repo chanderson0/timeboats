@@ -3096,13 +3096,24 @@ require.define("/api.coffee", function (require, module, exports, __dirname, __f
     LocalAPI.prototype.load = function(key) {
       var item;
       item = window.localStorage.getItem(key);
+      if (!(item != null) || item.length === 0) return false;
+      if (typeof pokki !== "undefined" && pokki !== null) {
+        console.log('deserializing with pokki');
+        item = pokki.descramble(item);
+      }
       item = JSON.parse(item);
       Serializable.deserialize(item, classmap);
       return item;
     };
 
     LocalAPI.prototype.save = function(key, value) {
-      return window.localStorage.setItem(key, JSON.stringify(value));
+      var to_save;
+      to_save = JSON.stringify(value);
+      if (typeof pokki !== "undefined" && pokki !== null) {
+        console.log('serializing with pokki');
+        to_save = pokki.scramble(to_save);
+      }
+      return window.localStorage.setItem(key, to_save);
     };
 
     LocalAPI.prototype.gamesKey = function() {
@@ -4133,11 +4144,12 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       $("#buttons button").prop("disabled", true);
       $("#buttons").fadeOut();
       $("#load").fadeIn();
-      $('#loading').show();
+      $('#loading').fadeIn();
       return async.parallel({
         game_ids: api.gameIds,
         games: api.getGames
       }, function(err, data) {
+        $('#loading').stop(true);
         $('#loading').hide();
         if (!err) return drawGames(data.game_ids, data.games, api);
       });
@@ -4178,28 +4190,16 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     });
     window.gameClicked = function(id) {
       render = false;
-      $('#loading').show();
+      $('#loading').fadeIn();
       console.log(id);
-      api.getGames(function(err, games) {
-        return console.log(err, games);
-      });
-      api.gameIds(function(err, gameids) {
-        return console.log(err, gameids);
-      });
       return game = api.getGame(id, function(err, game) {
         var _this = this;
+        $('#loading').stop(true);
         $('#loading').hide();
         if (err) {
           alert("couldn't load game " + id);
           return;
         }
-        console.log('loaded', id, game);
-        api.getGames(function(err, games) {
-          return console.log(err, games);
-        });
-        api.gameIds(function(err, gameids) {
-          return console.log(err, gameids);
-        });
         timeboats = new Timeboats(game, game_context, game_canvas.width, game_canvas.height, api, window.document);
         timeboats.turnClicked(null);
         $("#menu-canvas").fadeOut(1000);

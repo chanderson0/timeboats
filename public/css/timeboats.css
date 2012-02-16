@@ -29,7 +29,8 @@ form, input, h1, h2, button, label, a, img {
   top: 0;
   right: 0;
   width: 40px;
-  /*height: 40px;*/
+  height: 40px;
+  z-index: 999999999999;
   background: url('../img/minimize-normal.png') top right no-repeat;
 }
 

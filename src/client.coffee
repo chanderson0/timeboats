@@ -174,13 +174,14 @@ load = ->
     $("#buttons").fadeOut()
     $("#load").fadeIn()
 
-    $('#loading').show()
+    $('#loading').fadeIn()
 
     async.parallel {
       game_ids: api.gameIds
       games: api.getGames
     },
     (err, data) ->
+      $('#loading').stop true
       $('#loading').hide()
       if not err
         drawGames data.game_ids, data.games, api
@@ -222,23 +223,15 @@ load = ->
 
   window.gameClicked = (id) =>
     render = false
-    $('#loading').show()
+    $('#loading').fadeIn()
     console.log id
-    api.getGames (err, games) ->
-      console.log err, games
-    api.gameIds (err, gameids) ->
-      console.log err, gameids
+
     game = api.getGame id, (err, game) ->
+      $('#loading').stop true
       $('#loading').hide()
       if err
         alert "couldn't load game " + id
         return
-
-      console.log 'loaded', id, game
-      api.getGames (err, games) ->
-        console.log err, games
-      api.gameIds (err, gameids) ->
-        console.log err, gameids
 
       timeboats = new Timeboats game, game_context, game_canvas.width, game_canvas.height, api, window.document
       timeboats.turnClicked null
