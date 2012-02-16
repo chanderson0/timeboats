@@ -350,6 +350,8 @@ load = ->
     goodScore = 10 / game.order.length
     for player_id in game.order
       player = game.players[player_id]
+      if not player.scores['gold']?
+        player.scores['gold'] = 0
       if player.scores['gold'] > maxScore
         maxScore = player.scores['gold']
         bestPlayer = player

@@ -4304,6 +4304,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         player_id = _ref[_i];
         player = game.players[player_id];
+        if (!(player.scores['gold'] != null)) player.scores['gold'] = 0;
         if (player.scores['gold'] > maxScore) {
           maxScore = player.scores['gold'];
           bestPlayer = player;
