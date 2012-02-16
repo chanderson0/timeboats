@@ -38,7 +38,8 @@ clearPlayers = ->
 drawPlayer = (player, goodScore = 5) ->
   positiveRanks = [ "Captain", "First Mate", "Swordsman", "Bombardier", "Admiral", "Colonel" ]
   negativeRanks = [ "Deck Boy", "Rigging Monkey", "Drunkard", "Ship's Cook", "Seasick", "Davy Jones" ]
-  rank = "sd"
+  rank = ""
+  console.log "goodscore is #{goodScore} and player score is #{player.scores['gold']}"
   if player.scores['gold'] >= goodScore
     rank = positiveRanks[parseInt(Math.random() * positiveRanks.length)]
   else
@@ -181,15 +182,24 @@ load = ->
 
     # TODO: flesh out this code here and in drawPlayer()
     maxScore = 0
+    tieScore = -1
+    isTie = true
     bestPlayer = null
-    goodScore = 10 / game.players.length
+    goodScore = 10 / game.order.length
     for player_id in game.order
       player = game.players[player_id]
       if player.scores['gold'] > maxScore
         maxScore = player.scores['gold']
         bestPlayer = player
+      if tieScore < 0
+        tieScore = player.scores['gold']
+      else if player.scores['gold'] != tieScore
+        isTie = false
       drawPlayer player, goodScore
-    $("#gameover .winner").append "#{bestPlayer.nickname} is the winner!"
+    if isTie
+      $("#gameover .winner").append "We'll call it a draw, mates."
+    else
+      $("#gameover .winner").append "#{bestPlayer.nickname} is the victor!"
 
   $("#back_to_menu").click =>
     $("#controls").fadeOut 1000
@@ -206,6 +216,8 @@ load = ->
       $("#menu").fadeIn 1000
       $("#buttons").fadeIn 1000
       $("#controls_placeholder").fadeIn 1000
+      $("#gameover .winner").html ''
+      $("#gameover .players").html ''
       $("#buttons button").prop "disabled", false
 
   $("#playbutton").click =>

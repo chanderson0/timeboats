@@ -3793,7 +3793,8 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     if (goodScore == null) goodScore = 5;
     positiveRanks = ["Captain", "First Mate", "Swordsman", "Bombardier", "Admiral", "Colonel"];
     negativeRanks = ["Deck Boy", "Rigging Monkey", "Drunkard", "Ship's Cook", "Seasick", "Davy Jones"];
-    rank = "sd";
+    rank = "";
+    console.log("goodscore is " + goodScore + " and player score is " + player.scores['gold']);
     if (player.scores['gold'] >= goodScore) {
       rank = positiveRanks[parseInt(Math.random() * positiveRanks.length)];
     } else {
@@ -3917,7 +3918,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       });
     };
     window.gameOver = function(game) {
-      var bestPlayer, goodScore, maxScore, player, player_id, _i, _len, _ref;
+      var bestPlayer, goodScore, isTie, maxScore, player, player_id, tieScore, _i, _len, _ref;
       $("#controls").fadeOut(1000);
       $("#controls_background").fadeIn(1000);
       render_menu = true;
@@ -3940,8 +3941,10 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         });
       });
       maxScore = 0;
+      tieScore = -1;
+      isTie = true;
       bestPlayer = null;
-      goodScore = 10 / game.players.length;
+      goodScore = 10 / game.order.length;
       _ref = game.order;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         player_id = _ref[_i];
@@ -3950,9 +3953,18 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
           maxScore = player.scores['gold'];
           bestPlayer = player;
         }
+        if (tieScore < 0) {
+          tieScore = player.scores['gold'];
+        } else if (player.scores['gold'] !== tieScore) {
+          isTie = false;
+        }
         drawPlayer(player, goodScore);
       }
-      return $("#gameover .winner").append("" + bestPlayer.nickname + " is the winner!");
+      if (isTie) {
+        return $("#gameover .winner").append("We'll call it a draw, mates.");
+      } else {
+        return $("#gameover .winner").append("" + bestPlayer.nickname + " is the victor!");
+      }
     };
     $("#back_to_menu").click(function() {
       $("#controls").fadeOut(1000);
@@ -3969,6 +3981,8 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         $("#menu").fadeIn(1000);
         $("#buttons").fadeIn(1000);
         $("#controls_placeholder").fadeIn(1000);
+        $("#gameover .winner").html('');
+        $("#gameover .players").html('');
         return $("#buttons button").prop("disabled", false);
       });
     });
