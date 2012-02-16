@@ -226,17 +226,24 @@ canvas {
   cursor: default;
 }
 
-#left #timeslider {
-  -webkit-appearance: none;  
+#left #slider {
   width: 613px;  
   height: 30px;
   margin: 0;
   margin-left: 7px;
   float: left;
-  /*-webkit-border-radius: 5px;  
-  border-radius: 5px;  */
   background: #2b3c4c;  
   cursor: pointer;
+  position: relative;
+}  
+
+#left #timeslider {
+  -webkit-appearance: none;  
+  width: 100%;  
+  height: 30px;
+  background: #2b3c4c;  
+  margin: 0;
+  padding: 0;
 }  
 
 #left #timeslider:disabled { 
@@ -248,7 +255,55 @@ canvas {
   width: 15px;  
   height: 30px;   
   background: #fff;
+  z-index: 100;
 }  
+
+#slider span {
+    /* position the text just under the button in the stacking order */
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    display: block;
+    z-index: 99;
+    width: 100%;
+    line-height: 30px;
+    text-align: center;
+
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+    color: white;
+    cursor: default;
+    -webkit-user-select: none;
+
+    /* semitransparent gradient mask to animate over the text */
+    -webkit-mask-image: -webkit-gradient(
+        linear,
+        left top,
+        right top,
+        color-stop(0, rgba(0,0,0,0.3)),
+        color-stop(0.45, rgba(0,0,0,0.3)),
+        color-stop(0.5, rgba(0,0,0,1)),
+        color-stop(0.55, rgba(0,0,0,0.3)),
+        color-stop(1, rgba(0,0,0,0.3))
+    );
+    -webkit-mask-size: 1000px;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-animation-timing-function: ease-in-out;
+    -webkit-animation: text-spotlight 4s infinite;
+}
+
+/* animate the webkit-mark over the text */
+@-webkit-keyframes text-spotlight {
+  0% {
+    -webkit-mask-position: -800px;
+  }
+
+  100% {
+    -webkit-mask-position: 0px;
+  }
+}
+
 
 #right {
   float: left;

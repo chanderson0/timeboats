@@ -274,7 +274,7 @@ exports.Timeboats = class Timeboats
           if object.__type == 'Square' || object.__type == 'Explosion'
             player_count++
 
-        if player_count == 0 or @frames_no_commands > 300
+        if player_count == 0 or @time > 10
           @frame_history.splice @frame_num + 1,
             @frame_history.length - @frame_num
           @updateSlider(@frame_num, @frame_num)
@@ -301,8 +301,8 @@ exports.Timeboats = class Timeboats
       context.fillText 'No movement warning!', @width / 2, 30
       context.restore()
 
-    time = @frame_history[@frame_num].time
-    time = 0 if not time?
+    time = 10 - @frame_history[@frame_num].time
+    time = 0 if not time? or time < 0
     $('#time').html time.toFixed 2
 
   draw: ->
