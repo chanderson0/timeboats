@@ -445,6 +445,9 @@ canvas {
   top: 0; left: 0;
   width: 100%; height: 100%;
   background-color:#2b3c4c;
+  background-image:url(../img/bar_right.png);
+  background-repeat: no-repeat;
+  background-position: right bottom;
   color: #fff;
   display: none;
 }
