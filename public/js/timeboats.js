@@ -638,14 +638,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
 
     Timeboats.prototype.drawHUD = function(context) {
       var time;
-      if (this.gamestate === 'recording' && this.frames_no_commands > 200) {
-        context.save();
-        context.fillStyle = '#c0262f';
-        context.font = 'bold 20px Verdana';
-        context.textAlign = 'center';
-        context.fillText('No movement warning!', this.width / 2, 30);
-        context.restore();
-      }
       time = 10 - this.frame_history[this.frame_num].time;
       if (!(time != null) || time < 0) time = 0;
       return $('#time').html(time.toFixed(2));
@@ -1684,7 +1676,7 @@ require.define("/point.coffee", function (require, module, exports, __dirname, _
 
 require.define("/checkpoint.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var AssetLoader, Checkpoint, GameObject2D, Goldsplosion, Point;
+  var AssetLoader, Checkpoint, GameObject2D, GetTheGold, Goldsplosion, Point;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   GameObject2D = require('./game_object_2d.coffee').GameObject2D;
@@ -1694,6 +1686,8 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
   Point = require('./point.coffee').Point;
 
   Goldsplosion = require('./goldsplosion.coffee').Goldsplosion;
+
+  GetTheGold = require('./getthegold.coffee').GetTheGold;
 
   exports.Checkpoint = Checkpoint = (function() {
 
@@ -1724,7 +1718,7 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
     };
 
     Checkpoint.prototype.update = function(dt, state) {
-      var allChecked, id, object, _ref, _ref2, _ref3;
+      var allChecked, gtg, id, object, _ref, _ref2, _ref3;
       this.dt += dt;
       if (this.dt >= 0.4) {
         this.dt = 0;
@@ -1736,31 +1730,33 @@ require.define("/checkpoint.coffee", function (require, module, exports, __dirna
       for (id in _ref) {
         object = _ref[id];
         if (object.__type === 'Square' && Point.getDistance(this.x + 21, this.y + 24, object.x, object.y) < this.radius) {
+          object.explode(state);
           if (!this.checked) {
             state.addScore(object.id, 1, 'checkpoint');
             this.checked = true;
-          }
-          object.explode(state);
-          allChecked = false;
-          if (this.checked) {
-            allChecked = true;
-            _ref2 = state.objects;
-            for (id in _ref2) {
-              object = _ref2[id];
-              if (object.__type === 'Checkpoint' && !object.checked) {
-                allChecked = false;
-                break;
+            allChecked = false;
+            if (this.checked) {
+              allChecked = true;
+              _ref2 = state.objects;
+              for (id in _ref2) {
+                object = _ref2[id];
+                if (object.__type === 'Checkpoint' && !object.checked) {
+                  allChecked = false;
+                  break;
+                }
               }
             }
-          }
-          if (allChecked) {
-            _ref3 = state.objects;
-            for (id in _ref3) {
-              object = _ref3[id];
-              if (object.__type === 'Mine' && !object.isGold) {
-                object.isGold = true;
-                state.addObject("goldsplosion_check" + object.id, new Goldsplosion("goldsplosion_check" + object.id, object.x + 24, object.y + 6));
+            if (allChecked) {
+              _ref3 = state.objects;
+              for (id in _ref3) {
+                object = _ref3[id];
+                if (object.__type === 'Mine' && !object.isGold) {
+                  object.isGold = true;
+                  state.addObject("goldsplosion_check" + object.id, new Goldsplosion("goldsplosion_check" + object.id, object.x + 24, object.y + 6));
+                }
               }
+              gtg = new GetTheGold("getthegold" + this.id, 360, 280);
+              state.addObject("getthegold" + this.id, gtg);
             }
           }
           break;
@@ -1919,7 +1915,8 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
         boat3: "boat3.png",
         gold: "gold.png",
         sparkle0: "sparkle0.png",
-        sparkle1: "sparkle1.png"
+        sparkle1: "sparkle1.png",
+        getthegold: "getthegold.png"
       };
       this.numAssets = this.urls.length;
       this.numLoaded = 0;
@@ -2029,6 +2026,62 @@ require.define("/goldsplosion.coffee", function (require, module, exports, __dir
     };
 
     return Goldsplosion;
+
+  })();
+
+}).call(this);
+
+});
+
+require.define("/getthegold.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var AssetLoader, GameObject2D, GetTheGold;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  GameObject2D = require('./game_object_2d.coffee').GameObject2D;
+
+  AssetLoader = require('./asset_loader.coffee').AssetLoader;
+
+  exports.GetTheGold = GetTheGold = (function() {
+
+    __extends(GetTheGold, GameObject2D);
+
+    GetTheGold.prototype.__type = 'GetTheGold';
+
+    function GetTheGold(id, x, y) {
+      this.id = id;
+      this.x = x;
+      this.y = y;
+      GetTheGold.__super__.constructor.call(this, this.id, this.x, this.y);
+      this.lifespan = this.ttl = 3.0;
+      this.vy = -3;
+    }
+
+    GetTheGold.prototype.clone = function() {
+      var exp;
+      exp = new GetTheGold(this.id, this.x, this.y);
+      exp.lifespan = this.lifespan;
+      exp.ttl = this.ttl;
+      exp.vy = this.vy;
+      return exp;
+    };
+
+    GetTheGold.prototype.update = function(dt, state) {
+      this.ttl -= dt;
+      if (this.ttl < this.lifespan * 0.7) this.vy -= 0.5;
+      GetTheGold.__super__.update.call(this, dt, state);
+      if (this.ttl <= 0) return state.removeObject(this.id);
+    };
+
+    GetTheGold.prototype.draw = function(context) {
+      if (Math.floor(this.ttl * 5) % 2 === 0) return;
+      context.save();
+      context.globalAlpha = this.ttl / this.lifespan;
+      context.drawImage(AssetLoader.getInstance().getAsset("getthegold"), this.x - 191, this.y - 23, 382, 46);
+      return context.restore();
+    };
+
+    return GetTheGold;
 
   })();
 
