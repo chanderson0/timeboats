@@ -41,7 +41,7 @@
           <button class="back">Back</button>
         </div>
         <div id="gameover">
-          <img src="img/dog.jpg" />
+          <div class="players"></div>
           <button class="back">Back</button>
         </div>
       </div>
@@ -105,6 +105,13 @@
     [% for (var i=0; i<game_ids.length; i++) { %]
       <span class='game' data="[%= game_ids[i] %]">[%= game_ids[i].substring(0, 10) %]</span>
     [% } %]
+  </script>
+
+  <script id="gameover_player_template" type='text/ejs'>
+    <div id="[%= player.id %]" class="player">
+      <span class="player_name">[%= player.nickname %]</span>
+      <span class="player_score">[%= player.score %]</span>
+    </div>
   </script>
 </body>
 

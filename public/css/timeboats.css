@@ -138,10 +138,23 @@ button.back {
   text-align: center;
 }
 
-#gameover img {
+#gameover .players {
   position: absolute;
   top: 200px;
-  left: 110px;
+  left: 160px;
+  width: 400px;
+  height: 293px;
+  background: #000;
+  box-shadow: 1px 1px 4px #444;
+  color: #fff;
+}
+
+#gameover .players div {
+  width: 90%;
+  height: 50px;
+  text-align: left;
+  background: #111;
+  margin: 10px auto;
 }
 
 #gameover button {

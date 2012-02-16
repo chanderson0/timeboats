@@ -127,9 +127,9 @@ exports.Timeboats = class Timeboats
 
       # This should probably be somewhere else
       state = @frame_history[@frame_num]
-      map = @game.turnsToPlayers()
-      scores = state.playerScores map
-      @game.setScores scores, state.time
+      turn_map = @game.turnsToPlayers()
+      scores = state.playerScores turn_map
+      @game.setScores scores
       @game.render()
 
       if @api?

@@ -432,7 +432,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
     };
 
     Timeboats.prototype.updateState = function(oldState, newState) {
-      var command, gamePlayer, map, player, scores, startDock, state;
+      var command, gamePlayer, player, scores, startDock, state, turn_map;
       console.log(oldState, '->', newState);
       if ((oldState === "init" || oldState === "ready") && newState === "recording") {
         this.placeholder = null;
@@ -472,9 +472,9 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.active_commands = [];
         this.game.nextTurn();
         state = this.frame_history[this.frame_num];
-        map = this.game.turnsToPlayers();
-        scores = state.playerScores(map);
-        this.game.setScores(scores, state.time);
+        turn_map = this.game.turnsToPlayers();
+        scores = state.playerScores(turn_map);
+        this.game.setScores(scores);
         this.game.render();
         if (this.api != null) {
           this.api.saveGame(this.game, function(err, worked) {
@@ -2579,7 +2579,7 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
       if (!(this.nickname != null)) {
         this.nickname = ("" + this.id).substring(0, 10);
       }
-      this.score = 0;
+      this.scores = {};
       Player.__super__.constructor.apply(this, arguments);
     }
 
@@ -2718,22 +2718,14 @@ require.define("/turns.coffee", function (require, module, exports, __dirname, _
       return ret;
     };
 
-    Game.prototype.setScores = function(scoremap, time) {
-      var boats, checkpoints, gold, player_id, score, scores, _results;
+    Game.prototype.setScores = function(scoremap) {
+      var player_id, scores, _results;
       _results = [];
       for (player_id in scoremap) {
         scores = scoremap[player_id];
-        boats = scores['boat'] || 0;
-        checkpoints = scores['checkpoint'] || 0;
-        gold = scores['gold'] || 0;
-        score = this.computeScore(time, checkpoints, boats, gold);
-        _results.push(this.players[player_id].score = score);
+        _results.push(this.players[player_id].scores = scores);
       }
       return _results;
-    };
-
-    Game.prototype.computeScore = function(time, checkpoints, boats, gold) {
-      return gold + checkpoints + boats;
     };
 
     Game.prototype.recordTurn = function(commands) {
@@ -3734,7 +3726,7 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
 
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var API, MenuBoats, Timeboats, Turns, UUID, async, drawGames, game_canvas, game_context, load, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
+  var API, MenuBoats, Timeboats, Turns, UUID, async, clearPlayers, drawGames, drawPlayer, game_canvas, game_context, load, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
 
   Timeboats = require('./timeboats.coffee').Timeboats;
 
@@ -3781,6 +3773,21 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       id = $(e.target).attr('data');
       return window.gameClicked(id);
     });
+  };
+
+  clearPlayers = function() {
+    return $('#gameover .players').html('');
+  };
+
+  drawPlayer = function(player) {
+    var html;
+    html = new EJS({
+      element: 'gameover_player_template',
+      type: '<'
+    }).render({
+      player: player
+    });
+    return $('#gameover .players').append(html);
   };
 
   load = function() {
@@ -3876,6 +3883,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       });
     };
     window.gameOver = function(game) {
+      var player, player_id, _i, _len, _ref, _results;
       $("#controls").fadeOut(1000);
       $("#controls_background").fadeIn(1000);
       render_menu = true;
@@ -3888,7 +3896,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         $("#controls_placeholder").fadeIn(1000);
         return $("#gameover").show();
       });
-      return $('#gameover .back').click(function() {
+      $('#gameover .back').click(function() {
         $("#buttons button").prop("disabled", false);
         $("#game_right").fadeOut(1000);
         return $("#gameover").fadeOut(1000, function() {
@@ -3897,6 +3905,14 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
           return $("#background_right").fadeIn(1000);
         });
       });
+      _ref = game.order;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        player_id = _ref[_i];
+        player = game.players[player_id];
+        _results.push(drawPlayer(player));
+      }
+      return _results;
     };
     $("#back_to_menu").click(function() {
       $("#controls").fadeOut(1000);

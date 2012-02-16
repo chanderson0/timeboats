@@ -10,7 +10,8 @@ exports.Player = class Player extends Serializable
       @id = UUID.generate()
     if not @nickname?
       @nickname = ("" + @id).substring(0, 10)
-    @score = 0
+      
+    @scores = {}
 
     super
 
@@ -107,17 +108,9 @@ exports.Game = class Game extends Serializable
       ret[turn.id] = turn.player_id
     ret
 
-  setScores: (scoremap, time) ->
+  setScores: (scoremap) ->
     for player_id, scores of scoremap
-      boats = scores['boat'] || 0
-      checkpoints = scores['checkpoint'] || 0
-      gold = scores['gold'] || 0
-      score = @computeScore(time, checkpoints, boats, gold)
-
-      @players[player_id].score = score
-
-  computeScore: (time, checkpoints, boats, gold) ->
-    gold + checkpoints + boats # + time
+      @players[player_id].scores = scores
 
   recordTurn: (commands) ->
     turn = new Turn @next_turn_id, @currentPlayer().id, commands

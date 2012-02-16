@@ -31,6 +31,14 @@ drawGames = (game_ids, games, api) ->
     id = $(e.target).attr('data')
     window.gameClicked id
 
+clearPlayers = ->
+  $('#gameover .players').html ''
+
+# Code to flesh out.
+drawPlayer = (player) ->
+  html = new EJS(element: 'gameover_player_template', type: '<').render player: player
+  $('#gameover .players').append html
+
 load = ->
   loaded = true
 
@@ -68,9 +76,6 @@ load = ->
     $("#controls_placeholder").fadeOut 1000
     $("#instructions_right").fadeOut 1000
     $("#menu").fadeOut 1000, =>
-      # if pokki?
-      #   pokki.setPopupClientSize 1054, 627
-
       render = true
       render_menu = false
       $("#buttons").hide()
@@ -126,6 +131,8 @@ load = ->
         $("#game_right").fadeIn 1000
         $("#background_right").fadeOut 1000
 
+  # Called when timeboats.coffee decides the game is over.
+  # Needs to remove the menu and display the gameover screen.
   window.gameOver = (game) =>
     $("#controls").fadeOut 1000
     $("#controls_background").fadeIn 1000
@@ -139,15 +146,20 @@ load = ->
       $("#controls_placeholder").fadeIn 1000
       $("#gameover").show()
 
+    # Wire up the back button. This whole ordeal is hacky as
+    # all get out. works sort of.
     $('#gameover .back').click =>
       $("#buttons button").prop "disabled", false
-      # if pokki?
-      #     pokki.setPopupClientSize 750, 590
       $("#game_right").fadeOut 1000
       $("#gameover").fadeOut 1000, ->
         $("#buttons").fadeIn 1000
         $("#instructions_right").fadeIn 1000
         $("#background_right").fadeIn 1000
+
+    # TODO: flesh out this code here and in drawPlayer()
+    for player_id in game.order
+      player = game.players[player_id]
+      drawPlayer player
 
   $("#back_to_menu").click =>
     $("#controls").fadeOut 1000
