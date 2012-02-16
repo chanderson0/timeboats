@@ -21,6 +21,7 @@ exports.Timeboats = class Timeboats
 
     if not @game.mapSeed?
       @game.setMap new Date().getTime()
+    console.log @game.mapSeed
 
     initialState = new State()
 

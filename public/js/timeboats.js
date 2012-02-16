@@ -381,6 +381,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
       this.setFrameNum(0);
       this.active_commands = [];
       if (!(this.game.mapSeed != null)) this.game.setMap(new Date().getTime());
+      console.log(this.game.mapSeed);
       initialState = new State();
       Map.getInstance().generate(this.width / Map.CELL_SIZE_PX, this.height / Map.CELL_SIZE_PX, this.game.mapSeed, this.game.players, options.mapOptions || {});
       _ref = Map.getInstance().checkpoints;
@@ -3931,7 +3932,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
   };
 
   loadTutorial = function(mapOptions, seed, context, width, height, messages) {
-    var game, html, message, order, player, players, timeboats, _i, _len;
+    var game, html, m, message, order, player, players, timeboats, _i, _len;
     var _this = this;
     if (messages == null) messages = [];
     player = new Turns.Player(1, 0, 'You');
@@ -3953,7 +3954,13 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       }).render({
         message: message
       });
-      $('#menu').append(html);
+      m = $(html).appendTo($("#left"));
+      if ((message.fadeIn != null) && (message.delay != null)) {
+        m.delay(message.delay).fadeIn(message.fadeIn);
+      }
+      m.css('top', message.top);
+      m.css('left', message.left);
+      if (message.width != null) m.css('width', message.width);
     }
     $("#menu-canvas").fadeOut(1000);
     $("#controls_placeholder").fadeOut(1000);
@@ -3969,12 +3976,9 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     return timeboats;
   };
 
-  clearTutorial = function(cb) {
-    $('#menu .message').fadeOut(1000, function() {
+  clearTutorial = function() {
+    return $('#left .message').fadeOut(1000, function() {
       return $(this).remove();
-    });
-    return $('#game-canvas').fadeOut(1000, function() {
-      return cb();
     });
   };
 
@@ -4046,7 +4050,23 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         timeboats = loadTutorial({
           numMines: 0,
           numCheckpoints: 1
-        }, 25401329367224805, game_context, game_canvas.width, game_canvas.height);
+        }, 25401329367224805, game_context, game_canvas.width, game_canvas.height, [
+          {
+            text: 'Click once to ready, again to GO!',
+            left: '125px',
+            top: '460px',
+            width: '150px',
+            fadeIn: 1000,
+            delay: 1500
+          }, {
+            text: 'Then mouse here to hit the checkpoint.',
+            left: '45px',
+            top: '220px',
+            width: '150px',
+            fadeIn: 1000,
+            delay: 2250
+          }
+        ]);
         render = true;
         return render_menu = false;
       });
@@ -4090,26 +4110,52 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       $("#controls_background").fadeIn(1000);
       if (tutorial === 1) {
         tutorial = 2;
+        clearTutorial();
         $("#game-canvas").fadeOut(1000, function() {
           timeboats = loadTutorial({
             numMines: 2,
             numCheckpoints: 1
-          }, 25401329367291239, game_context, game_canvas.width, game_canvas.height);
+          }, 1329373618428, game_context, game_canvas.width, game_canvas.height, [
+            {
+              text: 'Avoid the mines.',
+              left: '45px',
+              top: '350px',
+              width: '150px',
+              fadeIn: 1000,
+              delay: 1250
+            }, {
+              text: 'Hit the checkpoint to turn mines into gold.',
+              left: '530px',
+              top: '120px',
+              width: '150px',
+              fadeIn: 1000,
+              delay: 2200
+            }, {
+              text: 'Multiple turns play at the same time. Win by collecting all the gold!',
+              left: '370px',
+              top: '280px',
+              width: '150px',
+              fadeIn: 1000,
+              delay: 3000
+            }
+          ]);
           return $("#game-canvas").fadeIn(1000);
         });
         return;
       } else if (tutorial === 2) {
         tutorial = 0;
+        clearTutorial();
         render_menu = true;
         render = false;
         menu_boats.full_redraw = true;
         $("#game-canvas").fadeOut(1000, function() {
           timeboats = null;
           $("#menu-canvas").fadeIn(1000);
+          $("#instructions_right").fadeIn(1000);
           $("#menu").fadeIn(1000);
           $("#buttons").fadeIn(1000);
-          $("#instructions_right").fadeIn(1000);
-          return $("#background_right").fadeIn(1000);
+          $("#controls_placeholder").fadeIn(1000);
+          return $("#buttons button").prop("disabled", false);
         });
         return;
       }
@@ -4159,6 +4205,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       }
     };
     $("#back_to_menu").click(function() {
+      clearTutorial();
       $("#controls").fadeOut(1000);
       $("#controls_background").fadeIn(1000);
       $("#game_right").fadeOut(1000);
