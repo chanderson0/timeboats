@@ -33,9 +33,11 @@ exports.Checkpoint = class Checkpoint extends GameObject2D
 
     for id, object of state.objects
       if object.__type == 'Square' and Point.getDistance(@x + 21, @y + 24, object.x, object.y) < @radius
-        state.addScore object.id, 1, 'checkpoint'
+        if not @checked
+          state.addScore object.id, 1, 'checkpoint'
+          @checked = true
+        
         object.explode state
-        @checked = true
 
         allChecked = false
         if @checked

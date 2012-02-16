@@ -129,25 +129,25 @@ load = ->
   window.gameOver = (game) =>
     $("#controls").fadeOut 1000
     $("#controls_background").fadeIn 1000
-    $("#game_right").fadeOut 1000
-    $("#background_right").fadeIn 1000
     render_menu = true
     render = false
     menu_boats.full_redraw = true
     $("#game-canvas").fadeOut 1000, =>
       timeboats = null
       $("#menu-canvas").fadeIn 1000
-      $("#instructions_right").fadeIn 1000
       $("#menu").fadeIn 1000
       $("#controls_placeholder").fadeIn 1000
       $("#gameover").show()
 
-   $('#gameover .back').click =>
-    $("#buttons button").prop "disabled", false
-    # if pokki?
-    #     pokki.setPopupClientSize 750, 590
-    $("#gameover").fadeOut 1000, ->
-      $("#buttons").fadeIn 1000
+    $('#gameover .back').click =>
+      $("#buttons button").prop "disabled", false
+      # if pokki?
+      #     pokki.setPopupClientSize 750, 590
+      $("#game_right").fadeOut 1000
+      $("#gameover").fadeOut 1000, ->
+        $("#buttons").fadeIn 1000
+        $("#instructions_right").fadeIn 1000
+        $("#background_right").fadeIn 1000
 
   $("#back_to_menu").click =>
     $("#controls").fadeOut 1000
