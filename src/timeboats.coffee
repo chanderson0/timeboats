@@ -298,13 +298,6 @@ exports.Timeboats = class Timeboats
       @state = @frame_history[@frame_num]
 
   drawHUD: (context) ->
-    if @gamestate == 'recording' and @frames_no_commands > 200
-      context.save()
-      context.fillStyle = '#c0262f'
-      context.font = 'bold 20px Verdana'
-      context.textAlign = 'center'
-      context.fillText 'No movement warning!', @width / 2, 30
-      context.restore()
 
     time = 10 - @frame_history[@frame_num].time
     time = 0 if not time? or time < 0

@@ -2,6 +2,7 @@ GameObject2D = require('./game_object_2d.coffee').GameObject2D
 AssetLoader = require('./asset_loader.coffee').AssetLoader
 Point = require('./point.coffee').Point
 Goldsplosion = require('./goldsplosion.coffee').Goldsplosion
+GetTheGold = require('./getthegold.coffee').GetTheGold
 
 exports.Checkpoint = class Checkpoint extends GameObject2D
   __type: 'Checkpoint'
@@ -33,26 +34,27 @@ exports.Checkpoint = class Checkpoint extends GameObject2D
 
     for id, object of state.objects
       if object.__type == 'Square' and Point.getDistance(@x + 21, @y + 24, object.x, object.y) < @radius
+        object.explode state
         if not @checked
           state.addScore object.id, 1, 'checkpoint'
           @checked = true
-        
-        object.explode state
 
-        allChecked = false
-        if @checked
-          allChecked = true
-          for id, object of state.objects
-            if object.__type == 'Checkpoint' and not object.checked
-              allChecked = false
-              break
+          allChecked = false
+          if @checked
+            allChecked = true
+            for id, object of state.objects
+              if object.__type == 'Checkpoint' and not object.checked
+                allChecked = false
+                break
 
-        # TURN THEM INTO GOooOOOLlddd!
-        if allChecked
-          for id, object of state.objects
-            if object.__type == 'Mine' and not object.isGold
-              object.isGold = true
-              state.addObject("goldsplosion_check#{object.id}", new Goldsplosion("goldsplosion_check#{object.id}", object.x + 24, object.y + 6))
+          # TURN THEM INTO GOooOOOLlddd!
+          if allChecked
+            for id, object of state.objects
+              if object.__type == 'Mine' and not object.isGold
+                object.isGold = true
+                state.addObject("goldsplosion_check#{object.id}", new Goldsplosion("goldsplosion_check#{object.id}", object.x + 24, object.y + 6))
+            gtg = new GetTheGold("getthegold" + @id, 360, 280)
+            state.addObject("getthegold" + @id, gtg)
         break
 
     super dt
