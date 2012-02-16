@@ -82,6 +82,8 @@ LocalAPI = class LocalAPI extends API
       if game_ids.length > 20
         first = game_ids[0]
         game_ids.shift()
+
+        console.log 'deleting', first, games[first].id
         delete games[first]
 
       if not (game.id in game_ids)

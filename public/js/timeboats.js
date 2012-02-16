@@ -3141,6 +3141,7 @@ require.define("/api.coffee", function (require, module, exports, __dirname, __f
         if (game_ids.length > 20) {
           first = game_ids[0];
           game_ids.shift();
+          console.log('deleting', first, games[first].id);
           delete games[first];
         }
         if (!(_ref = game.id, __indexOf.call(game_ids, _ref) >= 0)) {
@@ -3917,7 +3918,7 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
 
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var API, MenuBoats, Timeboats, Turns, UUID, async, clearPlayers, clearTutorial, drawGames, drawPlayer, game_canvas, game_context, getRandomNicknames, load, loadTutorial, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
+  var API, MenuBoats, Timeboats, Turns, UUID, async, attachHandler, clearPlayers, clearTutorial, drawGames, drawPlayer, game_canvas, game_context, getRandomNicknames, load, loadTutorial, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
 
   Timeboats = require('./timeboats.coffee').Timeboats;
 
@@ -3949,8 +3950,14 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     return +new Date();
   };
 
+  attachHandler = function(obj, id) {
+    return obj.click(function(e) {
+      return window.gameClicked(id);
+    });
+  };
+
   drawGames = function(game_ids, games, api) {
-    var game_id, html, _i, _len, _ref;
+    var game_id, html, obj, _i, _len, _ref;
     $('#games').html('');
     _ref = game_ids.reverse();
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -3963,14 +3970,10 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         name: games[game_id].name(),
         time: games[game_id].latestTurnTime().toISOString()
       });
-      $('#games').append($(html));
+      obj = $(html).appendTo($('#games'));
+      attachHandler(obj, game_id);
     }
-    $('.game_time').timeago();
-    return $('#games .game').click(function(e) {
-      var id;
-      id = $(e.target).attr('data');
-      return window.gameClicked(id);
-    });
+    return $('.game_time').timeago();
   };
 
   clearPlayers = function() {
@@ -4169,6 +4172,13 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     window.gameClicked = function(id) {
       render = false;
       $('#loading').show();
+      console.log(id);
+      api.getGames(function(err, games) {
+        return console.log(err, games);
+      });
+      api.gameIds(function(err, gameids) {
+        return console.log(err, gameids);
+      });
       return game = api.getGame(id, function(err, game) {
         var _this = this;
         $('#loading').hide();
@@ -4176,6 +4186,13 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
           alert("couldn't load game " + id);
           return;
         }
+        console.log('loaded', id, game);
+        api.getGames(function(err, games) {
+          return console.log(err, games);
+        });
+        api.gameIds(function(err, gameids) {
+          return console.log(err, gameids);
+        });
         timeboats = new Timeboats(game, game_context, game_canvas.width, game_canvas.height, api, window.document);
         timeboats.turnClicked(null);
         $("#menu-canvas").fadeOut(1000);
