@@ -164,14 +164,14 @@ load = ->
     $("#buttons button").prop "disabled", true
     $("#buttons").fadeOut 1000, =>
       tutorial = 1
-      timeboats = loadTutorial {numMines: 0, numCheckpoints: 1}, 
+      timeboats = loadTutorial {numMines: 0, numCheckpoints: 1},
         25401329367224805,
         game_context,
         game_canvas.width,
         game_canvas.height,
         [
           {
-            text: 'Click once to ready, again to GO!'
+            text: 'Click yer dock to get ready! Then click it again to sail!'
             left: '125px'
             top: '460px'
             width: '150px'
@@ -179,12 +179,12 @@ load = ->
             delay: 1500
           },
           {
-            text: 'Then mouse here to hit the checkpoint.'
+            text: 'Steer toward the checkpoint!'
             left: '45px'
             top: '220px'
             width: '150px'
             fadeIn: 1000
-            delay: 2250
+            delay: 3250
           }
         ]
       render = true
@@ -230,14 +230,14 @@ load = ->
       tutorial = 2
       clearTutorial()
       $("#game-canvas").fadeOut 1000, =>
-        timeboats = loadTutorial {numMines: 2, numCheckpoints: 1}, 
+        timeboats = loadTutorial {numMines: 2, numCheckpoints: 1},
           1329373618428,
           game_context,
           game_canvas.width,
           game_canvas.height,
           [
             {
-              text: 'Avoid the mines.'
+              text: 'Stay away from the mines to stay afloat!'
               left: '45px'
               top: '350px'
               width: '150px'
@@ -245,20 +245,28 @@ load = ->
               delay: 1250
             },
             {
-              text: 'Hit the checkpoint to turn mines into gold.'
+              text: 'If ye hit all the checkpoints, the mines turn to gold!'
               left: '530px'
               top: '120px'
               width: '150px'
               fadeIn: 1000
-              delay: 2200
+              delay: 2900
             },
             {
-              text: 'Multiple turns play at the same time. Win by collecting all the gold!'
-              left: '370px'
-              top: '280px'
+              text: 'You love gold! Collect the gold.'
+              left: '390px'
+              top: '320px'
               width: '150px'
               fadeIn: 1000
-              delay: 3000
+              delay: 4500
+            },
+            {
+              text: 'Oh, and yer ships are stuck in a cursed time loop...'
+              left: '420px'
+              top: '400px'
+              width: '280px'
+              fadeIn: 1000
+              delay: 7000
             }
           ]
         $("#game-canvas").fadeIn 1000
@@ -277,7 +285,7 @@ load = ->
         $("#buttons").fadeIn 1000
         $("#controls_placeholder").fadeIn 1000
         $("#buttons button").prop "disabled", false
-      
+
       return
 
     render_menu = true
