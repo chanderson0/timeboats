@@ -105,7 +105,7 @@ load = ->
   loaded = true
   tutorial = 0
 
-  api = new API.LocalAPI 'chris', null
+  api = new API.LocalAPI 'timeboats', null
 
   if pokki?
     pokki.setPopupClientSize 900, 627
@@ -119,13 +119,15 @@ load = ->
   game = null
   timeboats = null
 
-  $('#newgame').click =>
+  startGame = (n) ->
     render = false
-    nicknames = getRandomNicknames(2)
-    player1 = new Turns.Player 1, 0, nicknames[0]
-    player2 = new Turns.Player 2, 1, nicknames[1]
-    players = {1: player1, 2: player2}
-    order = [1, 2]
+    nicknames = getRandomNicknames(n)
+    players = {}
+    order = []
+    for i in [0...n]
+      player = new Turns.Player i+1, i, nicknames[i]
+      players[i+1] = player
+      order.push i+1
 
     $("#playbutton").prop "disabled", true
 
@@ -148,6 +150,12 @@ load = ->
       $("#game-canvas").fadeIn 1000
       $("#game_right").fadeIn 1000
       $("#background_right").fadeOut 1000
+
+  $('#newgame1p').click =>
+    startGame 1
+
+  $('#newgame2p').click =>
+    startGame 2
 
   $('#loadgame').click =>
     $("#buttons button").prop "disabled", true

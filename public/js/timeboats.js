@@ -4066,11 +4066,11 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
   };
 
   load = function() {
-    var api, dt, frame, frame_num, game, gdt, last, menu_boats, rdt, timeboats, tutorial;
+    var api, dt, frame, frame_num, game, gdt, last, menu_boats, rdt, startGame, timeboats, tutorial;
     var _this = this;
     loaded = true;
     tutorial = 0;
-    api = new API.LocalAPI('chris', null);
+    api = new API.LocalAPI('timeboats', null);
     if (typeof pokki !== "undefined" && pokki !== null) {
       pokki.setPopupClientSize(900, 627);
     }
@@ -4082,17 +4082,18 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     });
     game = null;
     timeboats = null;
-    $('#newgame').click(function() {
-      var nicknames, order, player1, player2, players;
+    startGame = function(n) {
+      var i, nicknames, order, player, players;
+      var _this = this;
       render = false;
-      nicknames = getRandomNicknames(2);
-      player1 = new Turns.Player(1, 0, nicknames[0]);
-      player2 = new Turns.Player(2, 1, nicknames[1]);
-      players = {
-        1: player1,
-        2: player2
-      };
-      order = [1, 2];
+      nicknames = getRandomNicknames(n);
+      players = {};
+      order = [];
+      for (i = 0; 0 <= n ? i < n : i > n; 0 <= n ? i++ : i--) {
+        player = new Turns.Player(i + 1, i, nicknames[i]);
+        players[i + 1] = player;
+        order.push(i + 1);
+      }
       $("#playbutton").prop("disabled", true);
       game = new Turns.Game(UUID.generate(), players, order);
       timeboats = new Timeboats(game, game_context, game_canvas.width, game_canvas.height, api, window.document);
@@ -4112,6 +4113,12 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         $("#game_right").fadeIn(1000);
         return $("#background_right").fadeOut(1000);
       });
+    };
+    $('#newgame1p').click(function() {
+      return startGame(1);
+    });
+    $('#newgame2p').click(function() {
+      return startGame(2);
     });
     $('#loadgame').click(function() {
       $("#buttons button").prop("disabled", true);

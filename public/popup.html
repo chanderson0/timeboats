@@ -33,7 +33,10 @@
           </div>
         </div>
         <div id="buttons">
-          <button id="newgame">New Game</button>
+          <div id="newgames">
+            <button id="newgame1p">Single Player</button>
+            <button id="newgame2p">Pass and Play</button>
+          </div>
           <button id="loadgame">Load Game</button>
           <button id="tutorial">Tutorial</button>
         </div>
@@ -80,13 +83,7 @@
         <button id="back_to_menu">Return to Menu</button>
       </div>
       <div id="instructions_right">
-        <span class="title">How To Play</span>
-        <div class="instructions_section">
-          <span>Click a boat!</span>
-          <span>Click a boat!</span>
-          <span>Click a boat!</span>
-          <span>Click a boat!</span>
-        </div>
+        <canvas id="instructions-canvas"></canvas>
       </div>
     </div>
   </div>
