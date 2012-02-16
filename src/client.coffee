@@ -79,7 +79,7 @@ loadTutorial = (mapOptions, seed, context, width, height, messages = []) ->
   order = [1]
   game = new Turns.Game UUID.generate(), players, order
   game.setMap seed
-  timeboats = new Timeboats game, context, width, height, null, window.document, {mapOptions:mapOptions}
+  timeboats = new Timeboats game, context, width, height, null, window.document, {mapOptions:mapOptions}, 20
   timeboats.turnClicked null
 
   for message in messages
@@ -162,6 +162,12 @@ load = ->
 
   $('#newgame2p').click =>
     startGame 2
+
+  $('#newgame3p').click =>
+    startGame 3
+
+  $('#newgame4p').click =>
+    startGame 4
 
   $('#loadgame').click =>
     $("#buttons button").prop "disabled", true
@@ -260,6 +266,35 @@ load = ->
       tutorial = 2
       clearTutorial()
       $("#game-canvas").fadeOut 1000, =>
+        timeboats = loadTutorial {numMines: 0, numCheckpoints: 2},
+          1329373618445,
+          game_context,
+          game_canvas.width,
+          game_canvas.height,
+          [
+            {
+              text: 'Click the dock to sail!'
+              left: '210px'
+              top: '120px'
+              width: '200px'
+              fadeIn: 1000
+              delay: 1250
+            },
+            {
+              text: "You'll need more than one ship this time."
+              left: '370px'
+              top: '370px'
+              width: '300px'
+              fadeIn: 1000
+              delay: 3000
+            }
+          ]
+        $("#game-canvas").fadeIn 1000
+      return
+    else if tutorial == 2
+      tutorial = 3
+      clearTutorial()
+      $("#game-canvas").fadeOut 1000, =>
         timeboats = loadTutorial {numMines: 2, numCheckpoints: 1},
           1329373618428,
           game_context,
@@ -289,19 +324,11 @@ load = ->
               width: '150px'
               fadeIn: 1000
               delay: 4500
-            },
-            {
-              text: 'Oh, and yer ships are stuck in a cursed time loop...'
-              left: '420px'
-              top: '400px'
-              width: '280px'
-              fadeIn: 1000
-              delay: 7000
             }
           ]
         $("#game-canvas").fadeIn 1000
       return
-    else if tutorial == 2
+    else if tutorial == 3
       tutorial = 0
       clearTutorial()
       render_menu = true
@@ -346,6 +373,8 @@ load = ->
     goodScore = 10 / game.order.length
     for player_id in game.order
       player = game.players[player_id]
+      if not player.scores['gold']?
+        player.scores['gold'] = 0
       if player.scores['gold'] > maxScore
         maxScore = player.scores['gold']
         bestPlayer = player
