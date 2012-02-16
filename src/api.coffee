@@ -79,6 +79,11 @@ LocalAPI = class LocalAPI extends API
       game_ids = data.game_ids
       games = data.games
 
+      if game_ids.length > 20
+        first = game_ids[0]
+        game_ids.shift()
+        delete games[first]
+
       if not (game.id in game_ids)
         game_ids.push game.id
         @save @gameIdsKey(), game_ids

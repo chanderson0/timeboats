@@ -31,9 +31,10 @@ class GameRenderer
     # Render moves
     if game.turns.length > 0
       console.log game.turns
-      for turn_idx in [0...game.turns.length]
-        turn = game.getTurnByIndex turn_idx
-        @renderTurnTile turn, turn_idx, game, false, false
+      for turn_idx in [1..game.turns.length]
+        idx = game.turns.length - turn_idx
+        turn = game.getTurnByIndex idx
+        @renderTurnTile turn, idx, game, false, false
       active_turn = game.getTurnByIndex game.turn_idx
       @renderTurnTile active_turn, game.turn_idx, game, true, true
 
@@ -41,7 +42,7 @@ class GameRenderer
     html = new EJS(element: 'turn_template').render
       active: if active then 'active' else ''
       id: turn.id
-      player_name: game.players[turn.player_id].color
+      player_name: game.players[turn.player_id].nickname
       turn_time: turn.time.toISOString()
       turn_number: number
     if update
@@ -108,6 +109,12 @@ exports.Game = class Game extends Serializable
       ret[turn.id] = turn.player_id
     ret
 
+  name: ->
+    ret = []
+    for player_id in @order
+      ret.push @players[player_id].nickname
+    ret.join ', ' 
+
   setScores: (scoremap) ->
     for player_id, scores of scoremap
       @players[player_id].scores = scores
@@ -118,6 +125,9 @@ exports.Game = class Game extends Serializable
     @turn_idx = @latestTurnNumber()
     @render()
     return turn
+
+  latestTurnTime: ->
+    @getTurnByIndex(@latestTurnNumber()).time
 
   getTurnByIndex: (idx) ->
     @turns[idx]

@@ -22,10 +22,15 @@ timestamp = ->
   +new Date()
 
 drawGames = (game_ids, games, api) ->
-  html = new EJS(element: 'games_template', type: '<').render
-    games: games
-    game_ids: game_ids
-  $('#games').html html
+  $('#games').html ''
+
+  for game_id in game_ids.reverse()
+    html = new EJS(element: 'games_template', type: '<').render
+      id: game_id
+      name: games[game_id].name()
+      time: games[game_id].latestTurnTime().toISOString()
+    $('#games').append $(html)
+  $('.game_time').timeago()
 
   $('#games .game').click (e) ->
     id = $(e.target).attr('data')
@@ -192,8 +197,8 @@ load = ->
 
   $('#load .back').click =>
     $("#buttons button").prop "disabled", false
-    $("#load").fadeOut 1000, ->
-      $("#buttons").fadeIn 1000
+    $("#load").fadeOut 200, ->
+      $("#buttons").fadeIn 200
 
   window.gameClicked = (id) =>
     render = false
@@ -437,7 +442,7 @@ load = ->
         rdt = rdt - render_obj.renderstep
         render_obj.draw()
 
-      render_ctx.fillText("" + Math.floor(1/dt), 10, 10)
+      # render_ctx.fillText("" + Math.floor(1/dt), 10, 10)
 
     last = now
 
@@ -483,4 +488,11 @@ window.onload = ->
   game_canvas = $('#game-canvas')[0]
   game_context = game_canvas.getContext '2d'
   load()
+
+  if pokki?
+    $("#minimize").click ->
+      pokki.closePopup()
+  else
+    $("#minimize").hide()
+
 
