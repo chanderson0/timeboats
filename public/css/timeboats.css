@@ -6,6 +6,20 @@ html, body {
   height: 627px;
 }
 
+#minimize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  /*height: 40px;*/
+  background: url('../img/minimize-normal.png') top right no-repeat;
+}
+
+#minimize:hover {
+  cursor:pointer;
+  background: url('../img/minimize-hover.png') top right no-repeat; 
+}
+
 #container {
   width: 870px;
   margin: 15px auto;
@@ -128,9 +142,26 @@ html, body {
   background: #333;
   color: #fff;
   box-shadow: 3px 3px 3px #111;
-  height: 30px;
-  line-height: 30px;
+  height: 50px;
   font-family: Verdana, sans-serif;
+  position: relative;
+}
+
+.game .game_name {
+  display: block;
+  padding: 5px;
+}
+
+.game .game_time {
+  display: block;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  font-size: 12px;
+  font-weight: normal;
+  font-style: italic;
+  padding: 6px;
+  color: #bbb;
 }
 
 #games .game:hover {
@@ -392,6 +423,8 @@ canvas {
   padding: 10px;
   text-shadow: 1px 1px 1px #1D2833;
   text-align: center;
+  height: 40px;
+  margin-bottom: 10px;
 }
 
 #right .nav {
@@ -401,15 +434,28 @@ canvas {
 }
 
 #right :first-child {
-  margin: 0;
+  margin-top: 0;
 }
 
+#scrollable {
+  margin-top: 10px;
+}
+
+#scrollable :last-child, #scrollable :first-child {
+  margin-bottom: 0;
+}
 
 #right .nav .title {
   font-weight: bold;
   margin-bottom: 5px;
   padding: 7px 5px;
   display: block;
+}
+
+#right .scrollable {
+  height: 490px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 #player_tiles .player {
@@ -446,7 +492,7 @@ canvas {
 
 #turn_tiles .turn {
   cursor: pointer;
-  height: 20px;
+  height:37px;
   width: 133px;
   background: #999999;
   padding: 5px;
@@ -470,6 +516,11 @@ canvas {
 
 .turn_time {
   font-style: italic;
+  font-size: 10px;
+}
+
+.turn_time span {
+  float: right;
 }
 
 #back_to_menu {

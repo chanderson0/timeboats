@@ -80,7 +80,7 @@ exports.State = class State extends Serializable
     # Detect end game
     gold = 0
     for id, object of @objects
-      if object.__type == 'Mine'
+      if object.__type == 'Mine' or (object.__type == 'Checkpoint' and not object.checked)
         gold++
         break
 

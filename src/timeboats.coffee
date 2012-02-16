@@ -121,6 +121,7 @@ exports.Timeboats = class Timeboats
       if @game.turns.length > 0
         $("#playbutton").html "Play"
         $("#playbutton").prop "disabled", false
+        $("#slider span").show()
       $("#timeslider").prop "disabled", false
     else if oldState == "recording" and newState == "paused"
       @game.recordTurn @active_commands
