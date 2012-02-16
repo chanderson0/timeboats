@@ -21,6 +21,10 @@ game_context = null
 timestamp = ->
   +new Date()
 
+attachHandler = (obj, id) ->
+  obj.click (e) ->
+    window.gameClicked id
+
 drawGames = (game_ids, games, api) ->
   $('#games').html ''
 
@@ -29,12 +33,14 @@ drawGames = (game_ids, games, api) ->
       id: game_id
       name: games[game_id].name()
       time: games[game_id].latestTurnTime().toISOString()
-    $('#games').append $(html)
+    obj = $(html).appendTo $('#games') 
+    attachHandler obj, game_id
+
   $('.game_time').timeago()
 
-  $('#games .game').click (e) ->
-    id = $(e.target).attr('data')
-    window.gameClicked id
+  # $('#games .game').click (e) ->
+  #   id = $(e.target).attr('data')
+  #   window.gameClicked id
 
 clearPlayers = ->
   $('#gameover .players').html ''
@@ -217,11 +223,22 @@ load = ->
   window.gameClicked = (id) =>
     render = false
     $('#loading').show()
+    console.log id
+    api.getGames (err, games) ->
+      console.log err, games
+    api.gameIds (err, gameids) ->
+      console.log err, gameids
     game = api.getGame id, (err, game) ->
       $('#loading').hide()
       if err
         alert "couldn't load game " + id
         return
+
+      console.log 'loaded', id, game
+      api.getGames (err, games) ->
+        console.log err, games
+      api.gameIds (err, gameids) ->
+        console.log err, gameids
 
       timeboats = new Timeboats game, game_context, game_canvas.width, game_canvas.height, api, window.document
       timeboats.turnClicked null
