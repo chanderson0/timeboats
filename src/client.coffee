@@ -79,7 +79,7 @@ loadTutorial = (mapOptions, seed, context, width, height, messages = []) ->
   order = [1]
   game = new Turns.Game UUID.generate(), players, order
   game.setMap seed
-  timeboats = new Timeboats game, context, width, height, null, window.document, {mapOptions:mapOptions}, 20
+  timeboats = new Timeboats game, context, width, height, null, window.document, {mapOptions:mapOptions,tutorial:mapOptions.numMines == 0}, 20
   timeboats.turnClicked null
 
   for message in messages
@@ -210,7 +210,7 @@ load = ->
             top: '220px'
             width: '150px'
             fadeIn: 1000
-            delay: 3250
+            delay: 2750
           }
         ]
       render = true
@@ -279,7 +279,15 @@ load = ->
               top: '370px'
               width: '300px'
               fadeIn: 1000
-              delay: 3000
+              delay: 2500
+            },
+            {
+              text: "Mind yer clickin! Can make ships 'splode their surroundins."
+              left: '6px'
+              top: '470px'
+              width: '300px'
+              fadeIn: 1000
+              delay: 4000
             }
           ]
         $("#game-canvas").fadeIn 1000
@@ -308,7 +316,7 @@ load = ->
               top: '120px'
               width: '150px'
               fadeIn: 1000
-              delay: 2900
+              delay: 2000
             },
             {
               text: 'You love gold! Collect the gold.'
@@ -316,7 +324,7 @@ load = ->
               top: '320px'
               width: '150px'
               fadeIn: 1000
-              delay: 4500
+              delay: 2900
             }
           ]
         $("#game-canvas").fadeIn 1000

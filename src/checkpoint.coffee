@@ -23,7 +23,7 @@ exports.Checkpoint = class Checkpoint extends GameObject2D
     c.checked = @checked
     return c
 
-  update: (dt, state) ->
+  update: (dt, state, options = {}) ->
     @dt += dt
     if @dt >= 0.4
       @dt = 0
@@ -53,8 +53,9 @@ exports.Checkpoint = class Checkpoint extends GameObject2D
               if object.__type == 'Mine' and not object.isGold
                 object.isGold = true
                 state.addObject("goldsplosion_check#{object.id}", new Goldsplosion("goldsplosion_check#{object.id}", object.x + 24, object.y + 6))
-            gtg = new GetTheGold("getthegold" + @id, 360, 280)
-            state.addObject("getthegold" + @id, gtg)
+            if not options.tutorial?
+              gtg = new GetTheGold("getthegold" + @id, 360, 280)
+              state.addObject("getthegold" + @id, gtg)
         break
 
     super dt

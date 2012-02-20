@@ -68,13 +68,13 @@ exports.State = class State extends Serializable
     
     ret
 
-  update: (dt) ->
+  update: (dt, options = {}) ->
     for command in @commands
       do (command) =>
         command.apply this
 
     for id, object of @objects
-      object.update dt, this
+      object.update dt, this, options
 
     # UGH
     # Detect end game

@@ -19,6 +19,8 @@ exports.Timeboats = class Timeboats
     @setFrameNum(0)
     @active_commands = []
 
+    @tutorial = if options.tutorial? then options.tutorial else false
+
     if not @game.mapSeed?
       @game.setMap new Date().getTime()
     console.log @game.mapSeed
@@ -64,11 +66,7 @@ exports.Timeboats = class Timeboats
     @game.render()
 
   playClick: ->
-    if @gamestate == "init" || @gamestate == "ready"
-      @updateState "init", "recording"
-    else if @gamestate == "recording"
-      @updateState "recording", "paused"
-    else if @gamestate == "paused"
+    if @gamestate == "paused"
       @updateState "paused", "playing"
     else if @gamestate == "playing"
       @updateState "playing", "paused"
@@ -108,7 +106,13 @@ exports.Timeboats = class Timeboats
       $("#playbutton").html "Stop"
       $("#playbutton").prop "disabled", true
       $("#timeslider").prop "disabled", false
-    else if oldState == "rerecording" and newState == "paused"
+      $("#slider span").hide()
+    else if (oldState == "rerecording" or oldState == "recording" or oldState == "playing") \
+         and (newState == "rerewinding" or newState == "rewinding" or newState == "playrewinding")
+      @rewindTime = 0
+      @frame_num_start = @frame_num
+      @gamestate = newState
+    else if oldState == "rerewinding" and newState == "paused"
       @gamestate = "paused"
 
       @setFrameNum(0)
@@ -123,7 +127,7 @@ exports.Timeboats = class Timeboats
         $("#playbutton").prop "disabled", false
         $("#slider span").show()
       $("#timeslider").prop "disabled", false
-    else if oldState == "recording" and newState == "paused"
+    else if oldState == "rewinding" and newState == "paused"
       @game.recordTurn @active_commands
       @active_commands = []
       @game.nextTurn()
@@ -167,6 +171,7 @@ exports.Timeboats = class Timeboats
       $("#playbutton").html "Pause"
       $("#playbutton").prop "disabled", false
       $("#timeslider").prop "disabled", true
+      $("#slider span").show()
     else if oldState == "paused" and newState == "ready"
       @setFrameNum(0)
       @time = 0
@@ -185,7 +190,8 @@ exports.Timeboats = class Timeboats
       $("#playbutton").html "Start"
       $("#playbutton").prop "disabled", false
       $("#timeslider").prop "disabled", true
-    else if (oldState == "playing" || oldState == "ready") and newState == "paused"
+      $("#slider span").hide()
+    else if (oldState == "playing" || oldState == "ready" || oldState == "playrewinding") and newState == "paused"
       @gamestate = "paused"
 
       gamePlayer = @game.currentPlayer()
@@ -195,12 +201,14 @@ exports.Timeboats = class Timeboats
       $("#playbutton").html "Play"
       $("#playbutton").prop "disabled", false
       $("#timeslider").prop "disabled", false
+      $("#slider span").show()
     else if newState == "gameover"
       @gamestate = "gameover"
 
       $("#playbutton").html "Play"
       $("#playbutton").prop "disabled", true
       $("#timeslider").prop "disabled", true
+      $("#slider span").hide()
 
       window.gameOver @game
     else
@@ -254,7 +262,10 @@ exports.Timeboats = class Timeboats
 
       next_state = @frame_history[@frame_num].clone @time
       next_state.setCommands (@command_history[@frame_num] || [])
-      next_state.update dt
+      if @tutorial
+        next_state.update dt, tutorial: true
+      else 
+        next_state.update dt
 
       @setFrameNum(@frame_num + 1)
       if @frame_history.length > @frame_num
@@ -269,10 +280,10 @@ exports.Timeboats = class Timeboats
         player_count = 0
         command_count = next_state.commands.length
 
-        if command_count > 0
-          @frames_no_commands = 0
-        else
+        if next_state.gameover
           @frames_no_commands++
+        else
+          @frames_no_commands = 0
 
         for id, object of next_state.objects
           if object.__type == 'Square' || object.__type == 'Explosion'
@@ -280,11 +291,14 @@ exports.Timeboats = class Timeboats
           if object.__type == 'Mine'
             Map.getInstance().collideWith(object, next_state)
 
-        if player_count == 0 or @time > @max_time
+        if player_count == 0 or @time > @max_time or @frames_no_commands > 50
           @frame_history.splice @frame_num + 1,
             @frame_history.length - @frame_num
           @updateSlider(@frame_num, @frame_num)
-          @updateState @gamestate, "paused"
+          if @gamestate == "rerecording"
+            @updateState @gamestate, "rerewinding"
+          else if @gamestate == "recording"
+            @updateState @gamestate, "rewinding"
       else
         @frames_no_commands = 0
 
@@ -292,11 +306,41 @@ exports.Timeboats = class Timeboats
       @setFrameNum(@frame_num + 1)
 
       if @frame_num >= @frame_history.length
-        @updateState "playing", "paused"
-        @setFrameNum(0)
+        @setFrameNum @frame_history.length - 1
+        @updateState "playing", "playrewinding"
 
     else if @gamestate == "paused"
       @state = @frame_history[@frame_num]
+
+    else if @gamestate == "rewinding" || @gamestate == "rerewinding" || @gamestate == "playrewinding"
+      @rewindTime += dt
+
+      t = @rewindTime
+      b = @frame_num_start
+      c = -@frame_num_start
+      d = @frame_history[@frame_num_start].time / 2
+
+      # quadratic easing. i have literally no idea
+      # how or why this works
+      val = 0
+      t /= d / 2
+      if t < 1
+        val = c / 2 * t * t + b
+      else
+        t--
+        val = -c / 2 * (t * (t - 2) - 1) + b
+
+      val = Math.floor val
+      @frame_num = val
+
+      if @frame_num <= 0 || @frame_num > @frame_history.length - 1
+        @setFrameNum 0
+        @updateState @gamestate, "paused"
+        return
+
+      Map.getInstance().setFrame(@frame_num, true)
+      @state = @frame_history[@frame_num]
+      @updateSlider(@frame_num)
 
   drawHUD: (context) ->
 
