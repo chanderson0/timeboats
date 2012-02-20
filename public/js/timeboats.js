@@ -524,7 +524,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         startDock.active = 'go';
         this.gamestate = "ready";
         $("#playbutton").html("Start");
-        $("#playbutton").prop("disabled", false);
+        $("#playbutton").prop("disabled", true);
         $("#timeslider").prop("disabled", true);
         return $("#slider span").hide();
       } else if ((oldState === "playing" || oldState === "ready" || oldState === "playrewinding") && newState === "paused") {
@@ -4118,10 +4118,15 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     return timeboats;
   };
 
-  clearTutorial = function() {
-    return $('#left .message').fadeOut(1000, function() {
-      return $(this).remove();
-    });
+  clearTutorial = function(hard) {
+    if (hard == null) hard = false;
+    if (!hard) {
+      return $('#left .message').fadeOut(1000, function() {
+        return $(this).remove();
+      });
+    } else {
+      return $('#left .message').remove();
+    }
   };
 
   load = function() {
@@ -4398,7 +4403,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       }
     };
     $("#back_to_menu").click(function() {
-      clearTutorial();
+      clearTutorial(true);
       $("#controls").fadeOut(1000);
       $("#controls_background").fadeIn(1000);
       $("#game_right").fadeOut(1000);

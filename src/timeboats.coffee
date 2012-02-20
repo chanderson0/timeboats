@@ -188,7 +188,7 @@ exports.Timeboats = class Timeboats
       @gamestate = "ready"
 
       $("#playbutton").html "Start"
-      $("#playbutton").prop "disabled", false
+      $("#playbutton").prop "disabled", true
       $("#timeslider").prop "disabled", true
       $("#slider span").hide()
     else if (oldState == "playing" || oldState == "ready" || oldState == "playrewinding") and newState == "paused"

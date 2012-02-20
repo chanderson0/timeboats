@@ -1,13 +1,20 @@
 html, body {
-  background: url('../img/sand.png') top left repeat;
   text-align: center;
   font-family: Verdana, sans-serif;
+  background: #4D4332;
 }
 
 #supercontainer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin-left: -450px;
+  margin-top: -313px;
   width: 900px;
   height: 627px;
-  margin: 0 auto;
+  background: url('../img/sand.png') top left repeat;
+  box-shadow: 1px 1px 3px #222;
+  border-radius: 5px;
 }
 
 p, div, button, span {
