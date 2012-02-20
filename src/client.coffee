@@ -114,6 +114,11 @@ load = ->
   loaded = true
   tutorial = 0
 
+  $('#loading').fadeIn 1000
+  AssetLoader.getInstance().load ->
+    $('#loading').stop true
+    $('#loading').hide()
+
   api = new API.LocalAPI 'timeboats', null
 
   if pokki?

@@ -13,6 +13,7 @@ exports.AssetLoader = class AssetLoader
   constructor: ->
     @assets = []
     @loaded = []
+    @loading = false
 
     # add images here: key -> url.
     # use getAsset(key) to access them later.
@@ -45,14 +46,17 @@ exports.AssetLoader = class AssetLoader
       sparkle1: "sparkle1.png"
       getthegold: "getthegold.png"
 
-    @numAssets = @urls.length
+    @numAssets = 27
     @numLoaded = 0
 
+  doneLoading: ->
+    @numLoaded == @numAssets
 
-  load: ->
-    if @numLoaded == @numAssets
+  load: (cb = null) ->
+    if @doneLoading() or @loading
       return
 
+    @loading = true
     for asset, url of @urls
       @loaded[asset] = false
       @assets[asset] = new Image
@@ -62,6 +66,11 @@ exports.AssetLoader = class AssetLoader
       @assets[asset].onLoad = () ->
         AssetLoader.getInstance().loaded[@name] = true
         AssetLoader.getInstance().numLoaded++
+
+        if @doneLoading()
+          @loading = false
+          if cb?
+            cb()
 
       @assets[asset].src = assetsDirectory + url
 
