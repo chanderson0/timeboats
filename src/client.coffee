@@ -103,9 +103,12 @@ loadTutorial = (mapOptions, seed, context, width, height, messages = []) ->
 
   timeboats
 
-clearTutorial = ->
-  $('#left .message').fadeOut 1000, ->
-    $(this).remove()
+clearTutorial = (hard = false) ->
+  if not hard
+    $('#left .message').fadeOut 1000, ->
+      $(this).remove()
+  else
+    $('#left .message').remove()
 
 load = ->
   loaded = true
@@ -390,7 +393,7 @@ load = ->
       $("#gameover .winner").append "#{bestPlayer.nickname} is the victor!"
 
   $("#back_to_menu").click =>
-    clearTutorial()
+    clearTutorial(true)
     $("#controls").fadeOut 1000
     $("#controls_background").fadeIn 1000
     $("#game_right").fadeOut 1000
