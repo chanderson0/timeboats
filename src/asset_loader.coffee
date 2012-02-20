@@ -63,7 +63,7 @@ exports.AssetLoader = class AssetLoader
       # @assets[asset].loader = @
       @assets[asset].name = asset
 
-      @assets[asset].onLoad = () ->
+      @assets[asset].onLoad = () =>
         AssetLoader.getInstance().loaded[@name] = true
         AssetLoader.getInstance().numLoaded++
 

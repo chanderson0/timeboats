@@ -181,7 +181,7 @@ exports.Map = class Map extends GameObject
     return if not @isInitialized
 
     if recompute
-      console.log "recomputing terrain"
+      # console.log "recomputing terrain"
       @.resetTerrain()
       for i in [0..@frame_num]
         if @damages["f#{i}"]?
