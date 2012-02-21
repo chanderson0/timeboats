@@ -11,6 +11,7 @@ AssetLoader = require('./asset_loader.coffee').AssetLoader
 loaded = false
 render = false
 render_menu = true
+play_audio = true
 
 # globals for canvases
 menu_canvas = null
@@ -119,6 +120,16 @@ load = ->
   AssetLoader.getInstance().load ->
     $('#loading').stop true
     $('#loading').hide()
+
+  $('#audio').click ->
+    if play_audio
+      play_audio = false
+      $('#audio').addClass 'off'
+      $('audio')[0].pause()
+    else
+      play_audio = true
+      $('#audio').removeClass 'off'
+      $('audio')[0].play()
 
   api = new API.LocalAPI 'timeboats', null
 
@@ -504,12 +515,15 @@ if pokki?
       render = true
     if old_render_menu
       render_menu = true
+    if play_audio
+      $('audio')[0].play()
 
   pokki.addEventListener 'popup_hiding', ->
     old_render = render
     old_render_menu = render_menu
     render = false
     render_menu = false
+    $('audio')[0].pause()
 
   # pokki.addEventListener 'popup_hidden', ->
   #   old_render = render

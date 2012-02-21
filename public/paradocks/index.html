@@ -33,15 +33,16 @@
             <div id="circular3d_8G" class="circular3dG"></div>
           </div>
         </div>
+        <button id="audio"></button>
         <div id="buttons">
           <div id="newgames">
             <button id="newgame1p">One Sailor</button>
             <button id="newgame2p">Two Sailors</button>
           </div>
-	  <div id="othernewgames">
-	    <button id="newgame3p">Three Sailors</button>
-	    <button id="newgame4p">Four Sailors</button>
-	  </div>
+      	  <div id="othernewgames">
+      	    <button id="newgame3p">Three Sailors</button>
+      	    <button id="newgame4p">Four Sailors</button>
+      	  </div>
           <button id="loadgame">Load Game</button>
           <button id="tutorial">Tutorial</button>
         </div>
@@ -133,6 +134,10 @@
     <div class="message">[%= message.text %]</div>
   </script>
 </div>
+
+<audio id="gamemusic" loop autoplay preload="auto">
+  <source src="audio/timeboats.mp3" type="audio/mp3"></source>
+</audio>
 </body>
 
 </html>

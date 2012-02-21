@@ -173,6 +173,30 @@ form, input, h1, h2, button, label, a, img {
   float: right;
 }
 
+#menu #audio {
+  width: 30px;
+  height: 30px;
+  position: absolute;
+  background: url('../img/audio_on.png') top left no-repeat !important;
+  box-shadow:none;
+  border-radius: 0;
+  left: 5px;
+  bottom: 5px;
+  margin: 0; padding: 0;
+}
+
+#menu #audio.off {
+  background: url('../img/audio_off.png') top left no-repeat !important;
+}
+
+#menu #audio:hover {
+  background: url('../img/audio_on_hover.png') top left no-repeat !important;
+}
+
+#menu #audio.off:hover {
+  background: url('../img/audio_off_hover.png') top left no-repeat !important;
+}
+
 .message {
   position: absolute;
   left: 0;

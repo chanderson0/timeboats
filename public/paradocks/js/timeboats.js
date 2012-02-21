@@ -3985,7 +3985,7 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
 
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var API, AssetLoader, MenuBoats, Timeboats, Turns, UUID, async, attachHandler, clearPlayers, clearTutorial, drawGames, drawPlayer, game_canvas, game_context, getRandomNicknames, load, loadTutorial, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
+  var API, AssetLoader, MenuBoats, Timeboats, Turns, UUID, async, attachHandler, clearPlayers, clearTutorial, drawGames, drawPlayer, game_canvas, game_context, getRandomNicknames, load, loadTutorial, loaded, menu_canvas, menu_context, old_render, old_render_menu, play_audio, render, render_menu, timestamp, unload;
 
   Timeboats = require('./timeboats.coffee').Timeboats;
 
@@ -4006,6 +4006,8 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
   render = false;
 
   render_menu = true;
+
+  play_audio = true;
 
   menu_canvas = null;
 
@@ -4151,6 +4153,17 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     AssetLoader.getInstance().load(function() {
       $('#loading').stop(true);
       return $('#loading').hide();
+    });
+    $('#audio').click(function() {
+      if (play_audio) {
+        play_audio = false;
+        $('#audio').addClass('off');
+        return $('audio')[0].pause();
+      } else {
+        play_audio = true;
+        $('#audio').removeClass('off');
+        return $('audio')[0].play();
+      }
     });
     api = new API.LocalAPI('timeboats', null);
     if (typeof pokki !== "undefined" && pokki !== null) {
@@ -4518,13 +4531,15 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     old_render_menu = false;
     pokki.addEventListener('popup_shown', function() {
       if (old_render) render = true;
-      if (old_render_menu) return render_menu = true;
+      if (old_render_menu) render_menu = true;
+      if (play_audio) return $('audio')[0].play();
     });
     pokki.addEventListener('popup_hiding', function() {
       old_render = render;
       old_render_menu = render_menu;
       render = false;
-      return render_menu = false;
+      render_menu = false;
+      return $('audio')[0].pause();
     });
   }
 
