@@ -477,7 +477,7 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
         this.game.recordTurn(this.active_commands);
         this.active_commands = [];
         this.game.nextTurn();
-        state = this.frame_history[this.frame_num];
+        state = this.frame_history[this.frame_history.length - 1];
         turn_map = this.game.turnsToPlayers();
         scores = state.playerScores(turn_map);
         this.game.setScores(scores);
@@ -3156,7 +3156,6 @@ require.define("/api.coffee", function (require, module, exports, __dirname, __f
       item = window.localStorage.getItem(key);
       if (!(item != null) || item.length === 0) return false;
       if (typeof pokki !== "undefined" && pokki !== null) {
-        console.log('deserializing with pokki');
         item = pokki.descramble(item);
       }
       item = JSON.parse(item);
@@ -3168,7 +3167,6 @@ require.define("/api.coffee", function (require, module, exports, __dirname, __f
       var to_save;
       to_save = JSON.stringify(value);
       if (typeof pokki !== "undefined" && pokki !== null) {
-        console.log('serializing with pokki');
         to_save = pokki.scramble(to_save);
       }
       return window.localStorage.setItem(key, to_save);
@@ -3211,7 +3209,6 @@ require.define("/api.coffee", function (require, module, exports, __dirname, __f
         if (game_ids.length > 20) {
           first = game_ids[0];
           game_ids.shift();
-          console.log('deleting', first, games[first].id);
           delete games[first];
         }
         if (!(_ref = game.id, __indexOf.call(game_ids, _ref) >= 0)) {
@@ -4456,18 +4453,18 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
       if (!(timeboats != null)) return;
       return timeboats.turnClicked(number);
     };
-    game_canvas.onmousedown = function(e) {
+    $(game_canvas).mousedown(function(e) {
       if (!(timeboats != null)) return;
       return timeboats.onMouseDown(e);
-    };
-    game_canvas.onmousemove = function(e) {
+    });
+    $(game_canvas).mousemove(function(event) {
       var canoffset, x, y;
       if (!(timeboats != null)) return;
       canoffset = $(game_canvas).offset();
       x = event.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - Math.floor(canoffset.left);
       y = event.clientY + document.body.scrollTop + document.documentElement.scrollTop - Math.floor(canoffset.top) + 1;
       return timeboats.onMouseMove([x, y]);
-    };
+    });
     last = timestamp();
     dt = 0;
     gdt = 0;

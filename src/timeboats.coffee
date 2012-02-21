@@ -133,7 +133,7 @@ exports.Timeboats = class Timeboats
       @game.nextTurn()
 
       # This should probably be somewhere else
-      state = @frame_history[@frame_num]
+      state = @frame_history[@frame_history.length - 1]
       turn_map = @game.turnsToPlayers()
       scores = state.playerScores turn_map
       @game.setScores scores

@@ -431,12 +431,12 @@ load = ->
       return
     timeboats.turnClicked number
 
-  game_canvas.onmousedown = (e) =>
+  $(game_canvas).mousedown (e) =>
     if not timeboats?
       return
     timeboats.onMouseDown e
 
-  game_canvas.onmousemove = (e) =>
+  $(game_canvas).mousemove (event) =>
     if not timeboats?
       return
     canoffset = $(game_canvas).offset()

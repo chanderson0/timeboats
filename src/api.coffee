@@ -44,18 +44,14 @@ LocalAPI = class LocalAPI extends API
     if not item? or item.length == 0
       return false
       
-    if pokki?
-      console.log 'deserializing with pokki'
-      item = pokki.descramble item
+    item = pokki.descramble item if pokki?
     item = JSON.parse item
     Serializable.deserialize item, classmap
     item
 
   save: (key, value) =>
     to_save = JSON.stringify value
-    if pokki?
-      console.log 'serializing with pokki'
-      to_save = pokki.scramble to_save
+    to_save = pokki.scramble to_save if pokki?
     window.localStorage.setItem key, to_save
 
   gamesKey: =>
@@ -91,9 +87,9 @@ LocalAPI = class LocalAPI extends API
 
       if game_ids.length > 20
         first = game_ids[0]
-        game_ids.shift()
+        #console.log 'deleting', first, game_ids, games
 
-        console.log 'deleting', first, games[first].id
+        game_ids.shift()
         delete games[first]
 
       if not (game.id in game_ids)
