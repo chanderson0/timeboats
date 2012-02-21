@@ -12,7 +12,7 @@ html, body {
   margin-top: -313px;
   width: 900px;
   height: 627px;
-  background: url('../img/sand.png') top left repeat;
+  background: #ad8c6a;
   box-shadow: 1px 1px 3px #222;
   border-radius: 5px;
 }
