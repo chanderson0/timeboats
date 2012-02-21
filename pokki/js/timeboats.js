@@ -672,7 +672,6 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
           return;
         }
         Map.getInstance().setFrame(this.frame_num, false);
-        Map.getInstance().computeTerrainState(true);
         this.state = this.frame_history[this.frame_num];
         return this.updateSlider(this.frame_num);
       }

@@ -339,7 +339,6 @@ exports.Timeboats = class Timeboats
         return
 
       Map.getInstance().setFrame @frame_num, false
-      Map.getInstance().computeTerrainState true
       @state = @frame_history[@frame_num]
       @updateSlider(@frame_num)
 
