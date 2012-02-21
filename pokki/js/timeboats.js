@@ -4542,6 +4542,7 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
         return pokki.closePopup();
       });
     } else {
+      if (!$.browser.webkit) $("#sorry").show();
       return $("#minimize").hide();
     }
   };

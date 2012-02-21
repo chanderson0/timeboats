@@ -528,6 +528,9 @@ window.onload = ->
     $("#minimize").click ->
       pokki.closePopup()
   else
+    if not $.browser.webkit
+      $("#sorry").show()
+
     $("#minimize").hide()
 
 

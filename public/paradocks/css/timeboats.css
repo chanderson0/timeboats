@@ -19,20 +19,23 @@ html, body {
 
 p, div, button, span {
   -webkit-touch-callout: none;
--webkit-user-select: none;
--khtml-user-select: none;
--moz-user-select: none;
--ms-user-select: none;
--o-user-select: none;
-user-select: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
 }
 
 html, body, div, span, object,
 form, input, h1, h2, button, label, a, img {
-  -moz-user-select: none;
+  -webkit-touch-callout: none;
   -webkit-user-select: none;
-  /* this will work for QtWebKit in future */
-  -webkit-user-drag: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
 }
 
 #minimize {
@@ -43,6 +46,22 @@ form, input, h1, h2, button, label, a, img {
   height: 40px;
   z-index: 999999999999;
   background: url('../img/minimize-normal.png') top right no-repeat;
+}
+
+#sorry {
+  position:absolute;
+  top: 0;
+  left: 50%;
+  margin-left: -230px;
+  width: 450px;
+  padding: 5px;
+  border-radius: 0 0 10px 10px;
+  background: yellow;
+  color: black;
+  font-family: Verdana, sans-serif;
+  font-weight: normal;
+  font-size: 12px;
+  display: none;
 }
 
 #minimize:hover {
