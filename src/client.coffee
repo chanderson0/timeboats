@@ -5,6 +5,7 @@ Turns = require('./turns.coffee')
 API = require('./api.coffee')
 UUID = require('./lib/uuid.js')
 async = require('./lib/async.js')
+AssetLoader = require('./asset_loader.coffee').AssetLoader
 
 # globals controlling rendering
 loaded = false

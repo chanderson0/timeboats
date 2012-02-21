@@ -1,3 +1,12 @@
+imgonload = (img, loader, asset, cb) ->
+  img.onload = ->
+    loader.loaded[asset] = true
+    loader.numLoaded++
+
+    if loader.doneLoading()
+      loader.loading = false
+      cb() if cb?
+
 exports.AssetLoader = class AssetLoader
   instance = null
   assetsDirectory = "img/"
@@ -59,18 +68,11 @@ exports.AssetLoader = class AssetLoader
     @loading = true
     for asset, url of @urls
       @loaded[asset] = false
+
       @assets[asset] = new Image
-      # @assets[asset].loader = @
       @assets[asset].name = asset
 
-      @assets[asset].onLoad = () =>
-        AssetLoader.getInstance().loaded[@name] = true
-        AssetLoader.getInstance().numLoaded++
-
-        if @doneLoading()
-          @loading = false
-          if cb?
-            cb()
+      imgonload(@assets[asset], this, asset, cb)
 
       @assets[asset].src = assetsDirectory + url
 

@@ -671,7 +671,8 @@ require.define("/timeboats.coffee", function (require, module, exports, __dirnam
           this.updateState(this.gamestate, "paused");
           return;
         }
-        Map.getInstance().setFrame(this.frame_num, true);
+        Map.getInstance().setFrame(this.frame_num, false);
+        Map.getInstance().computeTerrainState(true);
         this.state = this.frame_history[this.frame_num];
         return this.updateSlider(this.frame_num);
       }
@@ -1225,7 +1226,6 @@ require.define("/map.coffee", function (require, module, exports, __dirname, __f
       if (recompute == null) recompute = true;
       if (!this.isInitialized) return;
       if (recompute) {
-        console.log("recomputing terrain");
         this.resetTerrain();
         for (i = 0, _ref = this.frame_num; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
           if (this.damages["f" + i] != null) {
@@ -1913,7 +1913,18 @@ require.define("/game_object_2d.coffee", function (require, module, exports, __d
 
 require.define("/asset_loader.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var AssetLoader;
+  var AssetLoader, imgonload;
+
+  imgonload = function(img, loader, asset, cb) {
+    return img.onload = function() {
+      loader.loaded[asset] = true;
+      loader.numLoaded++;
+      if (loader.doneLoading()) {
+        loader.loading = false;
+        if (cb != null) return cb();
+      }
+    };
+  };
 
   exports.AssetLoader = AssetLoader = (function() {
     var assetsDirectory, instance;
@@ -1934,6 +1945,7 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
     function AssetLoader() {
       this.assets = [];
       this.loaded = [];
+      this.loading = false;
       this.urls = {
         checkpoint0: "checkpoint0.png",
         checkpoint1: "checkpoint1.png",
@@ -1963,13 +1975,19 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
         sparkle1: "sparkle1.png",
         getthegold: "getthegold.png"
       };
-      this.numAssets = this.urls.length;
+      this.numAssets = 27;
       this.numLoaded = 0;
     }
 
-    AssetLoader.prototype.load = function() {
+    AssetLoader.prototype.doneLoading = function() {
+      return this.numLoaded === this.numAssets;
+    };
+
+    AssetLoader.prototype.load = function(cb) {
       var asset, url, _ref, _results;
-      if (this.numLoaded === this.numAssets) return;
+      if (cb == null) cb = null;
+      if (this.doneLoading() || this.loading) return;
+      this.loading = true;
       _ref = this.urls;
       _results = [];
       for (asset in _ref) {
@@ -1977,10 +1995,7 @@ require.define("/asset_loader.coffee", function (require, module, exports, __dir
         this.loaded[asset] = false;
         this.assets[asset] = new Image;
         this.assets[asset].name = asset;
-        this.assets[asset].onLoad = function() {
-          AssetLoader.getInstance().loaded[this.name] = true;
-          return AssetLoader.getInstance().numLoaded++;
-        };
+        imgonload(this.assets[asset], this, asset, cb);
         _results.push(this.assets[asset].src = assetsDirectory + url);
       }
       return _results;
@@ -3974,7 +3989,7 @@ require.define("/lib/async.js", function (require, module, exports, __dirname, _
 
 require.define("/client.coffee", function (require, module, exports, __dirname, __filename) {
     (function() {
-  var API, MenuBoats, Timeboats, Turns, UUID, async, attachHandler, clearPlayers, clearTutorial, drawGames, drawPlayer, game_canvas, game_context, getRandomNicknames, load, loadTutorial, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
+  var API, AssetLoader, MenuBoats, Timeboats, Turns, UUID, async, attachHandler, clearPlayers, clearTutorial, drawGames, drawPlayer, game_canvas, game_context, getRandomNicknames, load, loadTutorial, loaded, menu_canvas, menu_context, old_render, old_render_menu, render, render_menu, timestamp, unload;
 
   Timeboats = require('./timeboats.coffee').Timeboats;
 
@@ -3987,6 +4002,8 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
   UUID = require('./lib/uuid.js');
 
   async = require('./lib/async.js');
+
+  AssetLoader = require('./asset_loader.coffee').AssetLoader;
 
   loaded = false;
 
@@ -4134,6 +4151,11 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     var _this = this;
     loaded = true;
     tutorial = 0;
+    $('#loading').fadeIn(1000);
+    AssetLoader.getInstance().load(function() {
+      $('#loading').stop(true);
+      return $('#loading').hide();
+    });
     api = new API.LocalAPI('timeboats', null);
     if (typeof pokki !== "undefined" && pokki !== null) {
       pokki.setPopupClientSize(900, 627);
