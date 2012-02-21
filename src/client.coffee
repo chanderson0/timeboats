@@ -522,9 +522,9 @@ window.onload = ->
   menu_context = menu_canvas.getContext '2d'
   game_canvas = $('#game-canvas')[0]
   game_context = game_canvas.getContext '2d'
-  load()
 
   if pokki?
+    console.log "loaded"
     $("#minimize").click ->
       pokki.closePopup()
   else
@@ -532,5 +532,7 @@ window.onload = ->
       $("#sorry").show()
 
     $("#minimize").hide()
+
+  load()
 
 

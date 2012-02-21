@@ -5,5 +5,6 @@
     "icon-29x29": "img/icon29.png",
     "icon-42x42": "img/icon42.png",
     "description": "Paradocks in Pokki.",
-    "popup": "popup.html"
+    "popup": "popup.html",
+    "default_popup_size": "900,627"
 }

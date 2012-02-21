@@ -2,6 +2,8 @@ html, body {
   text-align: center;
   font-family: Verdana, sans-serif;
   background: #4D4332;
+  width: 900px;
+  height: 627px;
 }
 
 #supercontainer {

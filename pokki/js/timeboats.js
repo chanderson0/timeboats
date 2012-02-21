@@ -4536,15 +4536,16 @@ require.define("/client.coffee", function (require, module, exports, __dirname, 
     menu_context = menu_canvas.getContext('2d');
     game_canvas = $('#game-canvas')[0];
     game_context = game_canvas.getContext('2d');
-    load();
     if (typeof pokki !== "undefined" && pokki !== null) {
-      return $("#minimize").click(function() {
+      console.log("loaded");
+      $("#minimize").click(function() {
         return pokki.closePopup();
       });
     } else {
       if (!$.browser.webkit) $("#sorry").show();
-      return $("#minimize").hide();
+      $("#minimize").hide();
     }
+    return load();
   };
 
 }).call(this);
