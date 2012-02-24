@@ -1,10 +1,10 @@
-Time. Boats.
+Now called Paradocks.
 
-Needs coffeescript and browserify
+Needs coffeescript and browserify.
+
 To compile client:
-> browserify src/client.coffee -o public/js/timeboats.js 
+> browserify src/client.coffee -o pokki/js/timeboats.js 
 
-Getting started with node:
-1. install nodejs and npm
-2. run 'npm install'
-3. run the server with 'coffee src/app.coffee'
+To run: open pokki/popup.html
+
+To package for Pokki: zip pokki/*
