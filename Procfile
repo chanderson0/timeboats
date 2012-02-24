@@ -1,1 +1,0 @@
-web: coffee simple_app.coffee
