@@ -1,6 +1,10 @@
-rm -rf ./public/paradocks
-mkdir -p ./public/paradocks
-cp -R ./pokki/* ./public/paradocks/
-sed '/Pokki/d' ./public/paradocks/popup.html > ./public/paradocks/index.html 
-rm -f ./public/paradocks/popup.html
-rm -f ./public/paradocks/manifest.json
+#!/bin/bash
+
+FOLDER=$1
+
+rm -rf $FOLDER
+mkdir -p $FOLDER
+cp -R ./pokki/* $FOLDER
+sed '/Pokki/d' $FOLDER/popup.html > $FOLDER/index.html 
+rm -f $FOLDER/popup.html
+rm -f $FOLDER/manifest.json
